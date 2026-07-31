@@ -1,0 +1,39 @@
+name: Publish packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@editful'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Publish unpublished package versions
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for package_dir in packages/*; do
+            package_name=$(node -p "require('./' + process.argv[1] + '/package.json').name" "$package_dir")
+            package_version=$(node -p "require('./' + process.argv[1] + '/package.json').version" "$package_dir")
+            if npm view "$package_name@$package_version" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+              echo "$package_name@$package_version is already published"
+            else
+              pnpm --dir "$package_dir" publish --no-git-checks
+            fi
+          done

@@ -5,14 +5,15 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/samschooler/editful-canvas-sdk.git",
+    "url": "git+https://github.com/editful/editful-canvas-sdk.git",
     "directory": "packages/plugin-sdk"
   },
-  "homepage": "https://github.com/samschooler/editful-canvas-sdk#readme",
-  "bugs": "https://github.com/samschooler/editful-canvas-sdk/issues",
+  "homepage": "https://github.com/editful/editful-canvas-sdk#readme",
+  "bugs": "https://github.com/editful/editful-canvas-sdk/issues",
   "type": "module",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "exports": {
     ".": {
