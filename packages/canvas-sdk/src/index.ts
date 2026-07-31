@@ -49,6 +49,27 @@ export const TextFont = {
 } as const;
 export type TextFont = number;
 
+/** Converts `#rgb`, `#rrggbb`, or `#rrggbbaa` to an Editful packed color. */
+export function hexColor(hex: string): number {
+  const value = hex.startsWith('#') ? hex.slice(1) : hex;
+  if (!/^(?:[\da-f]{3}|[\da-f]{6}|[\da-f]{8})$/iu.test(value)) {
+    throw new Error(`Unsupported hex color: ${hex}`);
+  }
+  const expanded = value.length === 3
+    ? [...value].map((part) => `${part}${part}`).join('')
+    : value;
+  const red = Number.parseInt(expanded.slice(0, 2), 16);
+  const green = Number.parseInt(expanded.slice(2, 4), 16);
+  const blue = Number.parseInt(expanded.slice(4, 6), 16);
+  const alpha = expanded.length === 8
+    ? Number.parseInt(expanded.slice(6, 8), 16)
+    : 255;
+  return (((alpha & 0xff) << 24) |
+    ((blue & 0xff) << 16) |
+    ((green & 0xff) << 8) |
+    (red & 0xff)) >>> 0;
+}
+
 export const TextAlign = {
   Left: 0,
   Center: 1,
@@ -113,6 +134,8 @@ export interface PrimitiveWriter {
     verticalAlign: number;
     readonly background?: {
       readonly fill: number;
+      readonly stroke?: number;
+      readonly strokeWidth?: number;
       readonly cornerRadius: number;
     };
   }): void;
@@ -179,6 +202,139 @@ export interface TextContribution<Kind = unknown> {
   readonly height: 'user' | 'auto' | 'derived';
   readonly minWidth?: number;
   readonly minHeight?: number;
+}
+
+declare const VIEW_NODE_KIND: unique symbol;
+/** Opaque declarative view node created by a kind's {@link ViewBuilder}. */
+export interface ViewNode<Kind = unknown> {
+  readonly [VIEW_NODE_KIND]: (kind: Kind) => Kind;
+}
+
+/** A fixed value or a field handle resolved from the rendered canvas node. */
+export type ViewValue<Value, Kind = unknown> = Value | FieldHandle<Value, Kind>;
+
+/** Logical and physical insets for a view box. Physical sides take precedence. */
+export interface ViewInsets {
+  /** Left and right inset. */
+  readonly inline?: number;
+  /** Top and bottom inset. */
+  readonly block?: number;
+  /** Top inset. */
+  readonly top?: number;
+  /** Right inset. */
+  readonly right?: number;
+  /** Bottom inset. */
+  readonly bottom?: number;
+  /** Left inset. */
+  readonly left?: number;
+}
+
+/** Font metrics used by both text measurement and paint. */
+export interface ViewTextFont {
+  /** Bundled font family. */
+  readonly family: TextFont;
+  /** Font size in canvas units, or the node's font size. */
+  readonly size: number | 'node';
+  /** Numeric font weight, or the node's font weight. */
+  readonly weight: number | 'node';
+  /** Italic state, or the node's italic state. */
+  readonly italic?: boolean | 'node';
+  /** Unitless line height, or the node's line height. */
+  readonly lineHeight: number | 'node';
+  /** Letter spacing in canvas units, or the node's letter spacing. */
+  readonly letterSpacing?: number | 'node';
+  /** Horizontal text alignment. */
+  readonly align?: 'left' | 'center' | 'right';
+}
+
+/** Options for a display-only text primitive. */
+export interface ViewTextOptions<Kind = unknown> {
+  /** Font metrics shared by measurement and paint. */
+  readonly font: ViewTextFont;
+  /** Packed color, field-bound color, or the node's text color. */
+  readonly color: ViewValue<number, Kind> | 'node';
+  /** Defaults to true. False measures the text at its intrinsic width. */
+  readonly wrap?: boolean;
+  /** Optional pointer semantics for the text bounds. */
+  readonly interaction?: {
+    /** Identifier reported to the plugin interaction handler. */
+    readonly id: string;
+    /** Accessible interaction role. */
+    readonly role: 'button' | 'link';
+    /** Accessible label for the interaction region. */
+    readonly label: string;
+  };
+}
+
+/** Remote or document-backed source for an image primitive. */
+export type ViewImageSource<Kind = unknown> =
+  | { readonly url: ViewValue<string, Kind> }
+  | { readonly asset: ViewValue<string, Kind> };
+
+/** Fixed image dimensions within a declarative view. */
+export interface ViewImageOptions {
+  /** Fixed width, or all available block width. */
+  readonly width: number | 'fill';
+  /** Fixed height in canvas units. */
+  readonly height: number;
+}
+
+/** Paint, padding, and optional child content for a container. */
+export interface ViewBoxOptions<Kind = unknown> {
+  /** The single child inside the box. */
+  readonly child?: ViewNode<Kind>;
+  /** Defaults to zero. Physical sides override their logical axis. */
+  readonly padding?: number | ViewInsets;
+  /** Packed fill, field-bound fill, or the node's fill. */
+  readonly fill?: ViewValue<number, Kind> | 'node';
+  /** Packed stroke, field-bound stroke, or the node's stroke. */
+  readonly stroke?: ViewValue<number, Kind> | 'node';
+  /** Stroke width in canvas units, or the node's stroke width. */
+  readonly strokeWidth?: number | 'node';
+  /** Corner radius, the node's radius, or a full pill radius. */
+  readonly cornerRadius?: number | 'node' | 'full';
+}
+
+/** Ordered children on the inline or block axis. */
+export interface ViewStackOptions<Kind = unknown> {
+  /** Inline lays out left to right. Block lays out top to bottom. */
+  readonly axis: 'inline' | 'block';
+  /** Ordered view nodes owned by the same kind. */
+  readonly children: readonly ViewNode<Kind>[];
+  /** Defaults to zero. */
+  readonly gap?: number;
+  /** Inline cross-axis alignment. Defaults to center. */
+  readonly align?: 'start' | 'center' | 'end';
+}
+
+/** Kind-scoped factory for declarative view primitives. */
+export interface ViewBuilder<Kind = unknown> {
+  /** Creates measured display text from a literal or field value. */
+  text(
+    value: ViewValue<string, Kind>,
+    options: ViewTextOptions<Kind>,
+  ): ViewNode<Kind>;
+  /** Creates a fixed-height remote or document-backed image. */
+  image(
+    source: ViewImageSource<Kind>,
+    options: ViewImageOptions,
+  ): ViewNode<Kind>;
+  /** Creates a painted container with zero or one child. */
+  box(options: ViewBoxOptions<Kind>): ViewNode<Kind>;
+  /** Creates an inline or block layout container. */
+  stack(options: ViewStackOptions<Kind>): ViewNode<Kind>;
+  /** Creates flexible space within an inline stack. */
+  spacer(): ViewNode<Kind>;
+}
+
+/** Root view and host-owned sizing policy registered with a node kind. */
+export interface ViewContribution<Kind = unknown> {
+  /** Root of the declarative view tree. */
+  readonly root: ViewNode<Kind>;
+  /** User-resizable width and optional minimum width. */
+  readonly width: { readonly mode: 'user'; readonly min?: number };
+  /** Height derived from the measured root content. */
+  readonly height: { readonly mode: 'fit-content' };
 }
 
 export interface StyleDefaults {
@@ -529,9 +685,11 @@ export interface PluginEditorContribution {
 
 export interface KindBuilder<Kind = unknown> {
   readonly field: KindFieldBuilder<Kind>;
+  readonly ui: ViewBuilder<Kind>;
   create(contribution: CreateContribution): void;
   hit(shape: 'rect' | 'ellipse'): void;
   text(contribution: TextContribution<Kind>): void;
+  view(contribution: ViewContribution<Kind>): void;
   defaults(contribution: StyleDefaults): void;
   agent(contribution: { readonly name: string; readonly description?: string }): void;
   interaction(contribution: PluginInteractionContribution): void;

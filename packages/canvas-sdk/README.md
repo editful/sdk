@@ -17,6 +17,45 @@ Agent action schemas use one authoritative, recursively bounded subset:
 `minLength`/`maxLength`, and numeric `minimum`/`maximum`. Registration rejects
 other keywords so the desktop runtime and published MCP schema cannot disagree.
 
+## Canvas views
+
+Use `kind.ui` for display UI. The host measures and paints the same view tree.
+Text is display-only; commands and editor surfaces write its fields.
+
+```ts
+import { TextFont, definePlugin, hexColor } from '@editful/canvas-sdk';
+
+export default definePlugin({
+  register(context) {
+    const card = context.kind('acme:card');
+    const title = card.field.string('title');
+    const ui = card.ui;
+
+    card.view({
+      root: ui.box({
+        fill: 'node',
+        padding: 20,
+        child: ui.text(title, {
+          font: {
+            family: TextFont.Sans,
+            size: 'node',
+            weight: 'node',
+            lineHeight: 'node',
+          },
+          color: hexColor('#f0f6fc'),
+        }),
+      }),
+      width: { mode: 'user', min: 280 },
+      height: { mode: 'fit-content' },
+    });
+  },
+});
+```
+
+Primitives: `text`, `image`, `box`, `stack`, and `spacer`. Values may be
+literals or field handles. Use `kind.pack()` instead when the kind needs custom
+geometry. A kind registers `view` or `pack`, not both.
+
 ```ts
 import { Primitive, definePlugin } from '@editful/canvas-sdk';
 

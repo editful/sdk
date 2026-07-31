@@ -3,18 +3,24 @@ name: Publish packages
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
   id-token: write
+
+concurrency:
+  group: sdk-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -24,18 +30,14 @@ jobs:
           scope: '@editful'
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
-      - name: Publish unpublished package versions
+      - name: Version or publish packages
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+          publish: pnpm release
+          title: Version Packages
+          commit: Version Packages
+          createGithubReleases: false
         env:
-          # Required for the first publish. npm trusted publishing uses OIDC
-          # automatically once this workflow is registered for each package.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          for package_dir in packages/*; do
-            package_name=$(node -p "require('./' + process.argv[1] + '/package.json').name" "$package_dir")
-            package_version=$(node -p "require('./' + process.argv[1] + '/package.json').version" "$package_dir")
-            if npm view "$package_name@$package_version" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
-              echo "$package_name@$package_version is already published"
-            else
-              pnpm --dir "$package_dir" publish --access public --no-git-checks
-            fi
-          done
