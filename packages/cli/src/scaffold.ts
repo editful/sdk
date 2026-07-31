@@ -117,7 +117,7 @@ export default definePluginConfig({
 export default definePlugin({
   register(context) {
     context.command({
-      id: 'local:${name}:hello',
+      id: 'local:${name}-hello',
       label: 'Say hello',
       toolbar: {
         icon: './assets/icon.svg',

@@ -18,9 +18,10 @@ describe('scaffoldPlugin', () => {
     expect(packageJson.dependencies['@editful/canvas-sdk']).toBe('^0.9.2');
     expect(packageJson.devDependencies['@editful/plugin-tools']).toBe('^0.9.2');
     await expect(access(join(result.directory, '.npmrc'))).rejects.toThrow();
-    expect(await readFile(join(result.directory, 'src/index.tsx'), 'utf8')).toContain(
-      "from '@editful/canvas-sdk'",
-    );
+    const source = await readFile(join(result.directory, 'src/index.tsx'), 'utf8');
+    expect(source).toContain("from '@editful/canvas-sdk'");
+    expect(source).toContain("id: 'local:my-plugin-hello'");
+    expect(source).not.toContain("id: 'local:my-plugin:hello'");
   });
 
   it('rejects unsafe names and existing directories', async () => {
