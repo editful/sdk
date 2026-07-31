@@ -1,5 +1,12 @@
 # @editful/canvas-sdk
 
+## 0.9.2
+
+### Patch Changes
+
+- Declare the stable Editful 0.9 plugin API version independently from npm
+  package versions so tooling-only patch releases remain host-compatible.
+
 ## 0.9.1
 
 ## 0.9.0

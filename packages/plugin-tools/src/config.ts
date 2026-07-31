@@ -1,6 +1,6 @@
-import { access, readFile } from 'node:fs/promises';
+import { access } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   PLUGIN_CAPABILITIES,
@@ -171,28 +171,15 @@ async function installedSdkVersion(project: string): Promise<string> {
       { cause },
     );
   }
-  let directory = dirname(entry);
-  while (true) {
-    const packagePath = join(directory, 'package.json');
-    try {
-      const parsed = JSON.parse(await readFile(packagePath, 'utf8')) as {
-        name?: unknown;
-        version?: unknown;
-      };
-      if (
-        parsed.name === '@editful/canvas-sdk' &&
-        typeof parsed.version === 'string'
-      ) {
-        return parsed.version;
-      }
-    } catch {
-      // Continue toward the filesystem root.
-    }
-    const parent = dirname(directory);
-    if (parent === directory) break;
-    directory = parent;
+  const sdk = await import(pathToFileURL(entry).href) as {
+    EDITFUL_PLUGIN_API_VERSION?: unknown;
+  };
+  if (typeof sdk.EDITFUL_PLUGIN_API_VERSION === 'string') {
+    return sdk.EDITFUL_PLUGIN_API_VERSION;
   }
-  throw new Error('Cannot read the installed @editful/canvas-sdk version');
+  throw new Error(
+    'Installed @editful/canvas-sdk does not declare EDITFUL_PLUGIN_API_VERSION',
+  );
 }
 
 function canonicalCapabilities(

@@ -1,3 +1,6 @@
+/** Runtime plugin contract implemented by compatible Editful 0.9.x releases. */
+export const EDITFUL_PLUGIN_API_VERSION = '0.9.0' as const;
+
 /**
  * Opaque typed reference to one field declared during plugin registration.
  *

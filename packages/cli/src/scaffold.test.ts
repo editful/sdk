@@ -15,8 +15,8 @@ describe('scaffoldPlugin', () => {
       await readFile(join(result.directory, 'package.json'), 'utf8'),
     ) as { dependencies: Record<string, string>; devDependencies: Record<string, string> };
 
-    expect(packageJson.dependencies['@editful/canvas-sdk']).toBe('^0.9.1');
-    expect(packageJson.devDependencies['@editful/plugin-tools']).toBe('^0.9.1');
+    expect(packageJson.dependencies['@editful/canvas-sdk']).toBe('^0.9.2');
+    expect(packageJson.devDependencies['@editful/plugin-tools']).toBe('^0.9.2');
     expect(await readFile(join(result.directory, '.npmrc'), 'utf8')).toContain(
       'https://npm.pkg.github.com',
     );

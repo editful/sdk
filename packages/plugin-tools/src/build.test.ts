@@ -65,9 +65,10 @@ describe('plugin tools build', () => {
     );
     const manifest = JSON.parse(
       await readFile(join(result.artifactDirectory, 'plugin.json'), 'utf8'),
-    ) as { id: string; entrySha256: string };
+    ) as { id: string; sdkVersion: string; entrySha256: string };
 
     expect(manifest.id).toBe('fixture:react-editor');
+    expect(manifest.sdkVersion).toBe('0.9.0');
     expect(manifest.entrySha256).toMatch(/^[a-f0-9]{64}$/);
     expect(source).not.toMatch(/(?:^|[;\n])\s*import\s/u);
     expect(result.bundleBytes).toBeLessThan(400_000);
