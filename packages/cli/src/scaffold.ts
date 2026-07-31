@@ -85,7 +85,6 @@ function projectFiles(name: string): Readonly<Record<string, string>> {
 
   return {
     '.gitignore': 'dist/\nnode_modules/\n*.editful-plugin\n',
-    '.npmrc': '@editful:registry=https://npm.pkg.github.com\n',
     'package.json': `${JSON.stringify(packageJson, null, 2)}\n`,
     'tsconfig.json': `${JSON.stringify({
       compilerOptions: {

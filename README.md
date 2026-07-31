@@ -70,11 +70,6 @@ for the configuration and command contract.
 CI enforces the published package boundary and rejects undeclared internal
 package imports, internal service endpoints, and symlinks.
 
-## Status
-
-The repository is private during extraction and release setup. It is designed
-to become public without rewriting its history.
-
 ## License
 
 [MIT](LICENSE)
