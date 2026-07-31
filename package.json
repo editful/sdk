@@ -1,0 +1,29 @@
+{
+  "name": "editful-canvas-sdk",
+  "version": "0.9.0",
+  "private": true,
+  "description": "Public SDK, build tools, and examples for Editful canvas plugins.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@11.13.1",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.json",
+    "typecheck": "tsc -p packages/plugin-sdk/tsconfig.json && tsc --build --force tsconfig.json",
+    "test": "vitest run",
+    "check:public": "node scripts/verify-public-boundary.mjs",
+    "check:example": "pnpm --dir examples/react-plugin typecheck && pnpm --dir examples/react-plugin check",
+    "check": "pnpm check:public && pnpm typecheck && pnpm test && pnpm build && pnpm check:example",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.1",
+    "@types/node": "^26.1.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

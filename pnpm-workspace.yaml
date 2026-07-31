@@ -1,0 +1,9 @@
+packages:
+  - 'packages/*'
+  - 'examples/*'
+
+allowBuilds:
+  esbuild: true
+
+minimumReleaseAgeExclude:
+  - vitest@4.1.10

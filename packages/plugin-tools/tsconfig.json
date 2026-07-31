@@ -1,0 +1,14 @@
+{
+  "extends": [
+    "../../tsconfig.base.json",
+    "../../tsconfig.paths.json"
+  ],
+  "compilerOptions": {
+    "rootDir": "./src",
+    "composite": false,
+    "noEmit": true,
+    "types": ["node"],
+    "lib": ["ES2023"]
+  },
+  "include": ["src/**/*"]
+}

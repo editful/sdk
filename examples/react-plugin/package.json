@@ -1,0 +1,24 @@
+{
+  "name": "editful-react-plugin-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "check": "node ../../packages/plugin-tools/dist/cli.js check",
+    "build": "node ../../packages/plugin-tools/dist/cli.js build",
+    "dev": "node ../../packages/plugin-tools/dist/cli.js dev",
+    "pack": "node ../../packages/plugin-tools/dist/cli.js pack"
+  },
+  "dependencies": {
+    "@editful/plugin-sdk": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@editful/plugin-tools": "workspace:*",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}

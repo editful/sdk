@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tgz
+*.editful-plugin
+*.tsbuildinfo
+.DS_Store
+coverage/
+packages/*/.plugin-tools-test-*/
+examples/*/plugin-dev-root/
