@@ -54,8 +54,7 @@ pnpm dev --root "$HOME/Documents/Editful Plugins"
 ```
 
 The tool writes one direct child per plugin. Editful watches that selected root
-and reloads validated rebuilds; creators never need the Editful application
-source or its development server.
+and reloads validated rebuilds.
 
 All npm packages are bundled. Node built-ins and unresolved imports fail the
 build. Auxiliary runtime chunks and assets are rejected because the current

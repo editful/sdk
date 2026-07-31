@@ -18,6 +18,5 @@ absolute folder to the watcher:
 pnpm dev --root "$HOME/Documents/Editful Plugins"
 ```
 
-No Editful application source checkout or application development server is
-required. The tool writes this plugin as a direct child of the selected folder,
-and Editful watches for validated rebuilds.
+The tool writes this plugin as a direct child of the selected folder, and
+Editful watches for validated rebuilds.

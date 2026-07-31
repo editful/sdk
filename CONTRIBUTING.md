@@ -13,7 +13,5 @@ Changes to a published package need a Changesets entry:
 pnpm changeset
 ```
 
-Keep the repository independent from the Editful application source. Do not
-add private package imports, application-relative paths, internal service
-endpoints, or copied application implementation. Extend the public SDK contract
-here first; the desktop host can consume a published version separately.
+Keep published packages limited to the documented SDK contract. Do not add
+undeclared internal package imports, internal service endpoints, or symlinks.

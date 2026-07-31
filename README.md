@@ -1,7 +1,6 @@
 # Editful Canvas SDK
 
-Build trusted local plugins for the Editful canvas without depending on the
-Editful application source tree.
+Build trusted local plugins for the Editful canvas.
 
 This repository contains the complete public plugin-development surface:
 
@@ -16,9 +15,8 @@ This repository contains the complete public plugin-development surface:
 - [`examples/react-plugin`](examples/react-plugin) — a small, buildable React
   sidebar plugin.
 
-The Editful desktop application and its canvas implementation are deliberately
-not dependencies of this repository. Plugins compile only against the narrow
-SDK contract and ship as self-contained artifacts.
+Plugins compile against the typed SDK contract and ship as self-contained
+artifacts.
 
 ## Requirements
 
@@ -34,10 +32,7 @@ pnpm --dir examples/react-plugin build
 pnpm --dir examples/react-plugin pack
 ```
 
-## Use the production Editful app
-
-Plugin creators use the normally installed Editful desktop app. They do not
-clone, build, or run the Editful application source.
+## Live development
 
 First create one stable folder for unpacked development plugins:
 
@@ -64,10 +59,8 @@ for the configuration and command contract.
 
 ## Repository boundary
 
-This repository is intentionally safe to publish independently. CI rejects
-private application-package imports, internal application paths, private
-service endpoints, and symlinks. History was created fresh rather than copied
-from the application repository.
+CI enforces the published package boundary and rejects undeclared internal
+package imports, internal service endpoints, and symlinks.
 
 ## Status
 
