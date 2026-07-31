@@ -4,9 +4,10 @@
   "commit": false,
   "fixed": [
     [
-      "@editful/plugin-sdk",
+      "@editful/canvas-sdk",
       "@editful/plugin-artifact",
-      "@editful/plugin-tools"
+      "@editful/plugin-tools",
+      "@editful/cli"
     ]
   ],
   "linked": [],

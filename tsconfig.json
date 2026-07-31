@@ -2,8 +2,9 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "files": [],
   "references": [
-    { "path": "./packages/plugin-sdk/tsconfig.build.json" },
+    { "path": "./packages/canvas-sdk/tsconfig.build.json" },
     { "path": "./packages/plugin-artifact/tsconfig.build.json" },
-    { "path": "./packages/plugin-tools/tsconfig.build.json" }
+    { "path": "./packages/plugin-tools/tsconfig.build.json" },
+    { "path": "./packages/cli/tsconfig.build.json" }
   ]
 }

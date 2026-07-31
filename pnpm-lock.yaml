@@ -23,9 +23,9 @@ importers:
 
   examples/react-plugin:
     dependencies:
-      '@editful/plugin-sdk':
+      '@editful/canvas-sdk':
         specifier: workspace:*
-        version: link:../../packages/plugin-sdk
+        version: link:../../packages/canvas-sdk
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -46,6 +46,10 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/canvas-sdk: {}
+
+  packages/cli: {}
+
   packages/plugin-artifact:
     dependencies:
       acorn:
@@ -54,8 +58,6 @@ importers:
       es-module-lexer:
         specifier: ^2.3.1
         version: 2.3.1
-
-  packages/plugin-sdk: {}
 
   packages/plugin-tools:
     dependencies:
@@ -66,9 +68,9 @@ importers:
         specifier: ^1.1.5
         version: 1.2.1
     devDependencies:
-      '@editful/plugin-sdk':
+      '@editful/canvas-sdk':
         specifier: workspace:*
-        version: link:../plugin-sdk
+        version: link:../canvas-sdk
       '@types/react':
         specifier: ^19.2.17
         version: 19.2.17

@@ -5,11 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/editful/editful-canvas-sdk.git",
+    "url": "git+https://github.com/editful/sdk.git",
     "directory": "packages/plugin-tools"
   },
-  "homepage": "https://github.com/editful/editful-canvas-sdk#readme",
-  "bugs": "https://github.com/editful/editful-canvas-sdk/issues",
+  "homepage": "https://github.com/editful/sdk#readme",
+  "bugs": "https://github.com/editful/sdk/issues",
   "type": "module",
   "publishConfig": {
     "access": "public",
@@ -45,7 +45,7 @@
     "rolldown": "^1.1.5"
   },
   "devDependencies": {
-    "@editful/plugin-sdk": "workspace:*",
+    "@editful/canvas-sdk": "workspace:*",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "react": "^19.2.8",

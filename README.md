@@ -4,7 +4,7 @@ Build trusted local plugins for the Editful canvas.
 
 This repository contains the complete public plugin-development surface:
 
-- [`@editful/plugin-sdk`](packages/plugin-sdk) — typed authoring contract for
+- [`@editful/canvas-sdk`](packages/canvas-sdk) — typed authoring contract for
   canvas kinds, commands, editor surfaces, imports, network access, and agent
   actions.
 - [`@editful/plugin-tools`](packages/plugin-tools) — TypeScript, TSX, React, and
@@ -12,11 +12,19 @@ This repository contains the complete public plugin-development surface:
   deterministic `.editful-plugin` archives.
 - [`@editful/plugin-artifact`](packages/plugin-artifact) — platform-neutral
   validation for unpacked Editful plugin artifacts.
+- [`@editful/cli`](packages/cli) — project scaffolding through
+  `editful plugin new`.
 - [`examples/react-plugin`](examples/react-plugin) — a small, buildable React
   sidebar plugin.
 
 Plugins compile against the typed SDK contract and ship as self-contained
 artifacts.
+
+Create a React plugin project with:
+
+```bash
+npx @editful/cli plugin new my-plugin
+```
 
 ## Requirements
 

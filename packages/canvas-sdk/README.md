@@ -18,7 +18,7 @@ Agent action schemas use one authoritative, recursively bounded subset:
 other keywords so the desktop runtime and published MCP schema cannot disagree.
 
 ```ts
-import { Primitive, definePlugin } from '@editful/plugin-sdk';
+import { Primitive, definePlugin } from '@editful/canvas-sdk';
 
 export default definePlugin({
   register(context) {

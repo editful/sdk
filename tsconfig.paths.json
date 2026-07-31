@@ -3,7 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@editful/plugin-sdk": ["packages/plugin-sdk/src/index.ts"],
+      "@editful/canvas-sdk": ["packages/canvas-sdk/src/index.ts"],
       "@editful/plugin-artifact": ["packages/plugin-artifact/src/index.ts"],
       "@editful/plugin-tools": ["packages/plugin-tools/src/index.ts"]
     }

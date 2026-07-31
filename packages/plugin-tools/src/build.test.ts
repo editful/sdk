@@ -41,7 +41,7 @@ describe('plugin tools build', () => {
     const directory = await project(`
       import React from 'react';
       import { createRoot } from 'react-dom/client';
-      import { definePlugin } from '@editful/plugin-sdk';
+      import { definePlugin } from '@editful/canvas-sdk';
       export default definePlugin({
         register(context) {
           context.editor({

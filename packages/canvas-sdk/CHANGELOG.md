@@ -1,4 +1,4 @@
-# @editful/plugin-sdk
+# @editful/canvas-sdk
 
 ## 0.9.0
 

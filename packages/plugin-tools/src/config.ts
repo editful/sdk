@@ -164,10 +164,10 @@ async function installedSdkVersion(project: string): Promise<string> {
   const require = createRequire(join(project, 'package.json'));
   let entry: string;
   try {
-    entry = require.resolve('@editful/plugin-sdk');
+    entry = require.resolve('@editful/canvas-sdk');
   } catch (cause) {
     throw new Error(
-      'Cannot infer sdkVersion because @editful/plugin-sdk is not installed',
+      'Cannot infer sdkVersion because @editful/canvas-sdk is not installed',
       { cause },
     );
   }
@@ -180,7 +180,7 @@ async function installedSdkVersion(project: string): Promise<string> {
         version?: unknown;
       };
       if (
-        parsed.name === '@editful/plugin-sdk' &&
+        parsed.name === '@editful/canvas-sdk' &&
         typeof parsed.version === 'string'
       ) {
         return parsed.version;
@@ -192,7 +192,7 @@ async function installedSdkVersion(project: string): Promise<string> {
     if (parent === directory) break;
     directory = parent;
   }
-  throw new Error('Cannot read the installed @editful/plugin-sdk version');
+  throw new Error('Cannot read the installed @editful/canvas-sdk version');
 }
 
 function canonicalCapabilities(

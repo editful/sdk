@@ -11,7 +11,7 @@
     "pack": "node ../../packages/plugin-tools/dist/cli.js pack"
   },
   "dependencies": {
-    "@editful/plugin-sdk": "workspace:*",
+    "@editful/canvas-sdk": "workspace:*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

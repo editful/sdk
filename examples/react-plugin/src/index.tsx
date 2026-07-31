@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { definePlugin } from '@editful/plugin-sdk';
+import { definePlugin } from '@editful/canvas-sdk';
 
 const EDITOR_ID = 'example:react-counter';
 

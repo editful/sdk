@@ -7,7 +7,7 @@ const source = (name: string) =>
 export default defineConfig({
   resolve: {
     alias: {
-      '@editful/plugin-sdk': source('plugin-sdk'),
+      '@editful/canvas-sdk': source('canvas-sdk'),
       '@editful/plugin-artifact': source('plugin-artifact'),
       '@editful/plugin-tools': source('plugin-tools'),
     },
