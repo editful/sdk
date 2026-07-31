@@ -34,15 +34,33 @@ pnpm --dir examples/react-plugin build
 pnpm --dir examples/react-plugin pack
 ```
 
-For live development, point the example at an Editful plugin folder:
+## Use the production Editful app
+
+Plugin creators use the normally installed Editful desktop app. They do not
+clone, build, or run the Editful application source.
+
+First create one stable folder for unpacked development plugins:
 
 ```bash
-pnpm --dir examples/react-plugin dev -- --root /absolute/path/to/plugins
+mkdir -p "$HOME/Documents/Editful Plugins"
 ```
 
-Editful loads the generated child directory from that selected plugin folder.
-See the [plugin tools documentation](packages/plugin-tools/README.md) for the
-configuration and command contract.
+In Editful, open **Manage plugins**, choose **Plugins folder**, select that same
+folder, and use **Reload Editful** when prompted. Then run the plugin watcher in
+a separate terminal:
+
+```bash
+pnpm --dir examples/react-plugin dev --root "$HOME/Documents/Editful Plugins"
+```
+
+The tool creates `example-react-counter/` as a direct child of the selected
+folder. The production app watches that folder and reloads validated plugin
+builds automatically. A change that expands remote-media policy may require the
+app reload offered by Editful.
+
+`--root` must be the exact folder selected in Editful, not the plugin project
+directory. See the [plugin tools documentation](packages/plugin-tools/README.md)
+for the configuration and command contract.
 
 ## Repository boundary
 

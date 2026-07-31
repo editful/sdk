@@ -133,7 +133,9 @@ function parseArguments(values: readonly string[]): Arguments {
   for (let index = 1; index < values.length; index++) {
     const value = values[index]!;
     const next = values[index + 1];
-    if (value === '--project' && next !== undefined) {
+    if (value === '--') {
+      continue;
+    } else if (value === '--project' && next !== undefined) {
       projectDirectory = resolve(next);
       index++;
     } else if (value === '--config' && next !== undefined) {

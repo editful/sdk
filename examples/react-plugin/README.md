@@ -10,8 +10,14 @@ pnpm build
 pnpm pack
 ```
 
-For live development, pass the absolute plugin folder selected in Editful:
+For live development, install the production Editful desktop app and select a
+stable folder under **Manage plugins → Plugins folder**. Then pass that same
+absolute folder to the watcher:
 
 ```bash
-pnpm dev -- --root /absolute/path/to/plugins
+pnpm dev --root "$HOME/Documents/Editful Plugins"
 ```
+
+No Editful application source checkout or application development server is
+required. The tool writes this plugin as a direct child of the selected folder,
+and Editful watches for validated rebuilds.

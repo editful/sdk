@@ -45,6 +45,18 @@ without touching `dist`. `dev` watches the project and emits an inline source
 map. `pack` additionally creates a deterministic
 `acme-status-card-1.0.0.editful-plugin` ZIP.
 
+For live development against the installed production app, select a stable
+**Plugins folder** in Editful and pass the exact same absolute folder to the
+watcher:
+
+```bash
+pnpm dev --root "$HOME/Documents/Editful Plugins"
+```
+
+The tool writes one direct child per plugin. Editful watches that selected root
+and reloads validated rebuilds; creators never need the Editful application
+source or its development server.
+
 All npm packages are bundled. Node built-ins and unresolved imports fail the
 build. Auxiliary runtime chunks and assets are rejected because the current
 Editful artifact contract accepts only a single module and passive SVG toolbar
