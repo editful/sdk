@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 
-const SDK_VERSION = '^0.9.0';
+const SDK_VERSION = '^0.9.1';
 const REACT_VERSION = '^19.2.0';
 const TYPESCRIPT_VERSION = '^5.9.0';
 const PLUGIN_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;

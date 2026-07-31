@@ -1,6 +1,6 @@
 {
   "name": "@editful/canvas-sdk",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Public TypeScript authoring contract for Editful canvas plugins.",
   "license": "MIT",
   "repository": {

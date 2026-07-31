@@ -14,8 +14,9 @@
     "typecheck": "tsc -p packages/canvas-sdk/tsconfig.json && tsc --build --force tsconfig.json",
     "test": "vitest run",
     "check:public": "node scripts/verify-public-boundary.mjs",
+    "check:cli": "node packages/cli/dist/cli.js --help",
     "check:example": "pnpm --dir examples/react-plugin typecheck && pnpm --dir examples/react-plugin check",
-    "check": "pnpm check:public && pnpm typecheck && pnpm test && pnpm build && pnpm check:example",
+    "check": "pnpm check:public && pnpm typecheck && pnpm test && pnpm build && pnpm check:cli && pnpm check:example",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish"
