@@ -7,7 +7,7 @@ toolbar command that opens it.
 pnpm typecheck
 pnpm check
 pnpm build
-pnpm pack
+pnpm run pack
 ```
 
 For live development, install the production Editful desktop app and select a
