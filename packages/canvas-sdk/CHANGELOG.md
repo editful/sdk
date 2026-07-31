@@ -1,5 +1,11 @@
 # @editful/canvas-sdk
 
+## 0.10.0
+
+### Minor Changes
+
+- 320fafa: Add declarative canvas views with text, image, box, stack, and spacer primitives, fit-content height, field-bound styles, and `hexColor`.
+
 ## 0.9.2
 
 ### Patch Changes
