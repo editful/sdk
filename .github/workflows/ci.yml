@@ -20,4 +20,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
-      - run: pnpm --dir examples/react-plugin pack
+      - run: pnpm --dir examples/react-plugin run pack
