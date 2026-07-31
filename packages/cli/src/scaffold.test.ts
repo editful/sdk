@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { access, mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -17,9 +17,7 @@ describe('scaffoldPlugin', () => {
 
     expect(packageJson.dependencies['@editful/canvas-sdk']).toBe('^0.9.2');
     expect(packageJson.devDependencies['@editful/plugin-tools']).toBe('^0.9.2');
-    expect(await readFile(join(result.directory, '.npmrc'), 'utf8')).toContain(
-      'https://npm.pkg.github.com',
-    );
+    await expect(access(join(result.directory, '.npmrc'))).rejects.toThrow();
     expect(await readFile(join(result.directory, 'src/index.tsx'), 'utf8')).toContain(
       "from '@editful/canvas-sdk'",
     );

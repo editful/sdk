@@ -13,7 +13,7 @@
   "type": "module",
   "publishConfig": {
     "access": "public",
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org"
   },
   "engines": {
     "node": ">=26"
@@ -25,7 +25,7 @@
     }
   },
   "bin": {
-    "editful-plugin": "./dist/cli.js"
+    "editful-plugin": "dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -37,7 +37,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc --build tsconfig.build.json",
+    "build": "tsc --build tsconfig.build.json && node ../../scripts/mark-executable.mjs dist/cli.js",
     "prepack": "pnpm build"
   },
   "dependencies": {
