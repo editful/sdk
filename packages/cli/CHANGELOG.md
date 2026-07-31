@@ -1,5 +1,11 @@
 # @editful/cli
 
+## 0.10.0
+
+### Patch Changes
+
+- 9a023e4: Generate valid, collision-resistant contribution IDs in new plugin projects.
+
 ## 0.9.2
 
 ## 0.9.1
