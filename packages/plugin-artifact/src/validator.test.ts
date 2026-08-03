@@ -286,6 +286,36 @@ describe('plugin manifest schema 1', () => {
   });
 });
 
+describe('validated plugin workers', () => {
+  it('retains declared worker bytes by digest', async () => {
+    const workerSource = 'self.onmessage = () => undefined; export default {};\n';
+    const artifact = await temporaryArtifact(VALID_SOURCE, {
+      schemaVersion: 2,
+      capabilities: ['gpu-renderer'],
+      network: [],
+      remoteMedia: [],
+      settings: [],
+      secrets: [],
+      workers: [{
+        path: './workers/render.mjs',
+        sha256: digest(workerSource),
+      }],
+    });
+    await mkdir(join(artifact.directory, 'workers'));
+    await writeFile(join(artifact.directory, 'workers/render.mjs'), workerSource);
+    try {
+      const validated = await validatePluginArtifact(artifact.directory, CONTEXT);
+      expect(validated.workers).toHaveLength(1);
+      expect(validated.workers[0]).toMatchObject({
+        path: './workers/render.mjs',
+        module: { digest: digest(workerSource) },
+      });
+    } finally {
+      await artifact.dispose();
+    }
+  });
+});
+
 describe('plugin artifact filesystem validation', () => {
   it('retains the exact validated bytes after the source path changes', async () => {
     const artifact = await temporaryArtifact();

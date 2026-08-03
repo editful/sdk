@@ -166,6 +166,140 @@ export interface PrimitiveWriter {
       readonly label: string;
     },
   ): void;
+  /**
+   * Places a retained GPU surface in this node's paint order.
+   *
+   * The renderer contribution is resolved by id. `state` is copied when the
+   * dirty scene chunk is gathered and must contain only bounded JSON data;
+   * fetched resources and mutable renderer state belong to the renderer
+   * instance, never the document or pack callback.
+   */
+  surface(
+    rendererId: string,
+    state: Readonly<Record<string, PluginJson>>,
+    x: number,
+    y: number,
+    halfW: number,
+    halfH: number,
+    rotation: number,
+  ): void;
+}
+
+/** A case-insensitive response-header snapshot returned by renderer I/O. */
+export type PluginRendererHeaders = Readonly<Record<string, string>>;
+
+export interface PluginRendererRequest {
+  readonly url: string;
+  readonly method?: 'GET' | 'POST';
+  readonly headers?: PluginRendererHeaders;
+  readonly body?: ArrayBuffer;
+  readonly signal?: AbortSignal;
+  /** Lower values are more urgent. */
+  readonly priority?: number;
+}
+
+export interface PluginRendererResponse {
+  readonly url: string;
+  readonly status: number;
+  readonly headers: PluginRendererHeaders;
+  readonly body: ArrayBuffer;
+}
+
+/** Renderer-lifetime, policy-checked network access for tiles and style data. */
+export interface PluginRendererNetwork {
+  request(request: PluginRendererRequest): Promise<PluginRendererResponse>;
+}
+
+/** A validated plugin-relative worker owned and terminated by the host. */
+export interface PluginRendererWorker {
+  postMessage(message: unknown, transfer?: readonly Transferable[]): void;
+  onMessage(listener: (message: unknown) => void): () => void;
+  onError(listener: (error: ErrorEvent) => void): () => void;
+  terminate(): void;
+}
+
+export interface PluginRendererWorkers {
+  create(asset: string, options?: { readonly name?: string }): PluginRendererWorker;
+}
+
+/** Services retained for one renderer contribution's complete lifetime. */
+export interface PluginRendererHost {
+  /** The Editful-owned context. The host restores its state after each call. */
+  readonly gl: WebGL2RenderingContext;
+  readonly network: PluginRendererNetwork;
+  readonly workers: PluginRendererWorkers;
+  /** Schedules another host canvas frame without starting a private loop. */
+  requestFrame(): void;
+  /** Resolves a validated plugin artifact asset to a retained URL. */
+  assetUrl(asset: string): string;
+}
+
+/** Host-owned framebuffer and dimensions supplied for one surface render. */
+export interface PluginSurfaceRenderTarget {
+  readonly framebuffer: WebGLFramebuffer;
+  readonly width: number;
+  readonly height: number;
+  readonly devicePixelRatio: number;
+}
+
+/** Immutable state for one visible retained surface in the current frame. */
+export interface PluginSurfaceFrame {
+  /** Stable for this document node while the renderer runtime is alive. */
+  readonly surfaceId: string;
+  readonly state: Readonly<Record<string, PluginJson>>;
+  readonly cssWidth: number;
+  readonly cssHeight: number;
+  /**
+   * CSS-pixel displacement of this retained viewport's center from the center
+   * of the complete surface. Large surfaces may be cropped to the host camera
+   * so renderers do not allocate pixels for offscreen content.
+   */
+  readonly viewportCenter: PluginSurfacePoint;
+  /**
+   * Realized surface pixels per world unit after host GPU limits and budgeting.
+   * Equals `canvasZoom` while the retained target can render at full DPR. A
+   * renderer should derive projection scale from this value so subsequent
+   * compositor scaling cannot change the surface's logical bounds.
+   */
+  readonly renderScale: number;
+  readonly canvasZoom: number;
+  readonly time: number;
+}
+
+export interface PluginSurfacePoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface PluginSurfaceQuery {
+  readonly surfaceId: string;
+  readonly state: Readonly<Record<string, PluginJson>>;
+  /** Surface-local CSS pixels from its top-left corner. */
+  readonly point: PluginSurfacePoint;
+}
+
+export interface PluginSurfaceQueryResult {
+  readonly cursor?: 'default' | 'pointer' | 'grab' | 'crosshair';
+  readonly features?: readonly PluginJson[];
+}
+
+/** One renderer runtime shared by every surface emitted for its contribution. */
+export interface PluginRendererInstance {
+  /** Return true when another frame is required after this one. */
+  render(
+    frame: PluginSurfaceFrame,
+    target: PluginSurfaceRenderTarget,
+  ): void | boolean;
+  query?(query: PluginSurfaceQuery): PluginSurfaceQueryResult | null;
+  surfaceDisposed?(surfaceId: string): void;
+  contextLost?(): void;
+  contextRestored?(): void;
+  dispose(): void;
+}
+
+export interface PluginRendererContribution {
+  readonly id: string;
+  create(host: PluginRendererHost): PluginRendererInstance;
 }
 
 export interface PackServices {
@@ -730,6 +864,8 @@ export interface PluginContext {
   editor(contribution: PluginEditorContribution): void;
   importer(contribution: PluginImporterContribution): void;
   action(contribution: PluginAgentActionContribution): void;
+  /** Registers trusted same-context rendering under `gpu-renderer`. */
+  renderer(contribution: PluginRendererContribution): void;
 }
 
 export interface PluginDefinition {

@@ -19,8 +19,10 @@ import {
 } from 'node:path';
 import {
   MAX_PLUGIN_BUNDLE_BYTES,
+  MAX_PLUGIN_WORKER_BYTES,
   validatePluginArtifact,
   type PluginManifest,
+  type PluginWorkerDeclaration,
 } from '@editful/plugin-artifact';
 import { rolldown, type OutputAsset, type OutputChunk } from 'rolldown';
 import { createPluginArchive } from './archive.js';
@@ -151,7 +153,8 @@ async function buildInto(
   }
   await writeFile(join(directory, 'plugin.mjs'), source);
   await copyIcons(config, directory);
-  const manifest = createManifest(config, source);
+  const workers = await buildWorkers(config, directory, development);
+  const manifest = createManifest(config, source, workers);
   await writeFile(
     join(directory, 'plugin.json'),
     `${JSON.stringify(manifest, null, 2)}\n`,
@@ -171,6 +174,7 @@ async function buildInto(
 function createManifest(
   config: ResolvedEditfulPluginConfig,
   source: string,
+  workers: readonly PluginWorkerDeclaration[],
 ): Record<string, unknown> {
   const common = {
     schemaVersion: config.schemaVersion,
@@ -196,7 +200,79 @@ function createManifest(
         remoteMedia: config.remoteMedia ?? [],
         settings: config.settings ?? [],
         secrets: config.secrets ?? [],
+        workers,
       };
+}
+
+async function buildWorkers(
+  config: ResolvedEditfulPluginConfig,
+  destination: string,
+  development: boolean,
+): Promise<readonly PluginWorkerDeclaration[]> {
+  const declarations: PluginWorkerDeclaration[] = [];
+  const outputs = new Set<string>();
+  for (const worker of config.assets?.workers ?? []) {
+    if (
+      typeof worker !== 'object' ||
+      worker === null ||
+      typeof worker.entry !== 'string' ||
+      typeof worker.output !== 'string' ||
+      !/^\.\/workers\/(?:[A-Za-z0-9][A-Za-z0-9._-]{0,63}\/)*[A-Za-z0-9][A-Za-z0-9._-]{0,63}\.mjs$/u.test(worker.output) ||
+      outputs.has(worker.output)
+    ) {
+      throw new TypeError('config.assets.workers entries require a unique portable ./workers/*.mjs output');
+    }
+    outputs.add(worker.output);
+    const entry = resolve(config.projectDirectory, worker.entry);
+    const child = relative(config.projectDirectory, entry);
+    if (isAbsolute(child) || child === '..' || child.startsWith(`..${sep}`)) {
+      throw new TypeError(`Plugin worker escapes the project directory: ${worker.entry}`);
+    }
+    const bundle = await rolldown({
+      input: entry,
+      cwd: config.projectDirectory,
+      platform: 'browser',
+      transform: {
+        define: {
+          'process.env.NODE_ENV': JSON.stringify(
+            development ? 'development' : 'production',
+          ),
+        },
+      },
+    });
+    let output: readonly (OutputAsset | OutputChunk)[];
+    try {
+      output = (await bundle.generate({
+        format: 'esm',
+        codeSplitting: false,
+        minify: !development,
+        sourcemap: false,
+        entryFileNames: 'worker.mjs',
+      })).output;
+    } finally {
+      await bundle.close();
+    }
+    const chunks = output.filter((item): item is OutputChunk => item.type === 'chunk');
+    const assets = output.filter((item): item is OutputAsset => item.type === 'asset');
+    if (chunks.length !== 1 || chunks[0]?.isEntry !== true || assets.length > 0) {
+      throw new Error(`Worker ${worker.entry} must bundle to one self-contained module`);
+    }
+    const source = chunks[0].code;
+    const bytes = Buffer.byteLength(source);
+    if (bytes > MAX_PLUGIN_WORKER_BYTES) {
+      throw new Error(`Worker ${worker.entry} exceeds ${formatBytes(MAX_PLUGIN_WORKER_BYTES)}`);
+    }
+    const target = join(destination, worker.output.slice(2));
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, source);
+    declarations.push(Object.freeze({
+      path: worker.output,
+      sha256: createHash('sha256').update(source).digest('hex'),
+    }));
+  }
+  return Object.freeze(declarations.sort((left, right) =>
+    left.path.localeCompare(right.path)
+  ));
 }
 
 async function copyIcons(

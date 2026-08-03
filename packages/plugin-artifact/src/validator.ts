@@ -18,12 +18,15 @@ import {
   MAX_PLUGIN_ICON_COUNT,
   MAX_PLUGIN_ICON_TOTAL_BYTES,
   MAX_PLUGIN_MANIFEST_BYTES,
+  MAX_PLUGIN_WORKER_BYTES,
+  MAX_PLUGIN_WORKER_TOTAL_BYTES,
   PLUGIN_ENTRY_FILE,
   PLUGIN_MANIFEST_FILE,
   type PluginArtifactValidationOptions,
   type PluginArtifactValidationResult,
   type ValidatedPluginArtifact,
   type ValidatedPluginIcon,
+  type ValidatedPluginWorker,
 } from './types.js';
 
 function errorCode(error: unknown): string | undefined {
@@ -300,6 +303,13 @@ async function validatePluginArtifactInner(
   }
   await validatePluginModuleSource(source, manifest.id);
   const module = options.cache?.retain(retained) ?? retained;
+  const workers = await collectPluginWorkers(
+    canonicalDirectory,
+    manifest.schemaVersion === 2 ? manifest.workers : [],
+    manifest.id,
+    options,
+  );
+  const workerPaths = new Set(workers.map(({ path }) => path));
   const icons = await collectPluginIcons(
     canonicalDirectory,
     entries.filter(
@@ -307,6 +317,7 @@ async function validatePluginArtifactInner(
         name !== PLUGIN_MANIFEST_FILE && name !== PLUGIN_ENTRY_FILE,
     ),
     manifest.id,
+    workerPaths,
   );
 
   return Object.freeze({
@@ -315,13 +326,68 @@ async function validatePluginArtifactInner(
     manifest,
     module,
     icons,
+    workers,
   });
+}
+
+async function collectPluginWorkers(
+  directory: string,
+  declarations: readonly { readonly path: string; readonly sha256: string }[],
+  pluginId: string,
+  options: PluginArtifactValidationOptions,
+): Promise<readonly ValidatedPluginWorker[]> {
+  const workers: ValidatedPluginWorker[] = [];
+  let totalBytes = 0;
+  for (const declaration of declarations) {
+    const path = join(directory, declaration.path.slice(2));
+    let resolved: string;
+    try {
+      resolved = await realpath(path);
+    } catch (cause) {
+      throw validationError('missing', 'WORKER_MISSING', `Plugin worker is missing: ${declaration.path}`, {
+        path,
+        pluginId,
+        cause,
+      });
+    }
+    if (!isContained(directory, resolved) || !(await lstat(path)).isFile()) {
+      throw validationError('corrupt', 'WORKER_NOT_REGULAR', `Plugin worker is not a contained regular file: ${declaration.path}`, {
+        path,
+        pluginId,
+      });
+    }
+    const bytes = await readBoundedRegularFile(resolved, MAX_PLUGIN_WORKER_BYTES, 'entry');
+    totalBytes += bytes.byteLength;
+    if (totalBytes > MAX_PLUGIN_WORKER_TOTAL_BYTES) {
+      throw validationError('unsupported', 'WORKER_TOO_LARGE', `Plugin workers exceed the ${MAX_PLUGIN_WORKER_TOTAL_BYTES}-byte combined limit`, {
+        path,
+        pluginId,
+      });
+    }
+    const source = decodePluginModule(bytes, pluginId);
+    await validatePluginModuleSource(source, pluginId, {
+      allowDynamicImports: true,
+    });
+    const retained = new RetainedPluginModule(bytes, source);
+    if (retained.digest !== declaration.sha256) {
+      throw validationError('corrupt', 'WORKER_DIGEST_MISMATCH', `Plugin worker digest does not match plugin.json: ${declaration.path}`, {
+        path,
+        pluginId,
+      });
+    }
+    workers.push(Object.freeze({
+      path: declaration.path,
+      module: options.cache?.retain(retained) ?? retained,
+    }));
+  }
+  return Object.freeze(workers);
 }
 
 async function collectPluginIcons(
   directory: string,
   rootEntries: readonly Dirent[],
   pluginId: string,
+  workerPaths: ReadonlySet<string>,
 ): Promise<readonly ValidatedPluginIcon[]> {
   const icons: ValidatedPluginIcon[] = [];
   let totalBytes = 0;
@@ -359,6 +425,8 @@ async function collectPluginIcons(
         continue;
       }
       if (!entry.isFile() || !entry.name.endsWith('.svg')) {
+        const relativePath = `./${relative(directory, path).split(sep).join('/')}`;
+        if (entry.isFile() && workerPaths.has(relativePath)) continue;
         throw validationError(
           'unsupported',
           'ARTIFACT_FILES_UNSUPPORTED',

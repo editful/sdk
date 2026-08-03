@@ -37,7 +37,11 @@ export type PluginArtifactDiagnosticCode =
   | 'ICON_TOO_LARGE'
   | 'ICON_COUNT_EXCEEDED'
   | 'ICON_INVALID_UTF8'
-  | 'ICON_SVG_INVALID';
+  | 'ICON_SVG_INVALID'
+  | 'WORKER_MISSING'
+  | 'WORKER_NOT_REGULAR'
+  | 'WORKER_TOO_LARGE'
+  | 'WORKER_DIGEST_MISMATCH';
 
 export interface PluginArtifactDiagnostic {
   readonly category: PluginArtifactDiagnosticCategory;
