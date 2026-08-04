@@ -1,5 +1,11 @@
 # @editful/canvas-sdk
 
+## 0.12.0
+
+### Minor Changes
+
+- c0866ff: Expose procedural line primitives, endpoint marker encoding, and two-point line creation geometry.
+
 ## 0.11.0
 
 ### Minor Changes
