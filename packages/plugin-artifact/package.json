@@ -1,6 +1,6 @@
 {
   "name": "@editful/plugin-artifact",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Platform-neutral validation for Editful plugin artifacts.",
   "license": "MIT",
   "repository": {
