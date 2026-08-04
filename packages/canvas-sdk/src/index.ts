@@ -37,10 +37,26 @@ export const Primitive = {
   RoundRect: 0,
   Ellipse: 1,
   None: 2,
+  /** Procedural straight line. `cornerRadius` carries `encodeLineMarkers(...)`. */
+  Line: 3,
   TextBlock: 100,
   ImageQuad: 101,
 } as const;
 export type Primitive = (typeof Primitive)[keyof typeof Primitive];
+
+/** Endpoint decoration understood by {@link Primitive.Line}. */
+export const LineMarker = {
+  None: 0,
+  OpenArrow: 1,
+  SolidArrow: 2,
+  Cap: 3,
+} as const;
+export type LineMarker = (typeof LineMarker)[keyof typeof LineMarker];
+
+/** Packs independently configurable start/end markers for a line quad. */
+export function encodeLineMarkers(start: LineMarker, end: LineMarker): number {
+  return start + end * 4;
+}
 
 export const TextFont = {
   Sans: 0,
@@ -321,6 +337,8 @@ export interface CreateContribution {
   readonly shortcut: string;
   readonly cursor: 'crosshair' | 'text';
   readonly gesture: 'drag' | 'place';
+  /** Geometry authored by the create gesture. Defaults to an axis-aligned box. */
+  readonly geometry?: 'box' | 'line';
   readonly order: number;
   readonly defaultSize: { readonly width: number; readonly height: number };
   readonly styleSlot: 'shape' | 'palette' | 'text';
