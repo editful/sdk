@@ -44,6 +44,12 @@ const PLUGIN_ID = /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/;
 export interface EditfulPluginAssets {
   /** Passive SVG toolbar icons copied into the artifact at the same path. */
   readonly icons?: readonly string[];
+  /** Module-worker entries bundled as self-contained, validated artifacts. */
+  readonly workers?: readonly {
+    readonly entry: string;
+    /** Plugin-relative output path, for example `./workers/render.mjs`. */
+    readonly output: string;
+  }[];
 }
 
 export interface EditfulPluginConfig {

@@ -12,6 +12,7 @@ import {
   type PluginRemoteMediaType,
   type PluginSecretDeclaration,
   type PluginSettingDeclaration,
+  type PluginWorkerDeclaration,
 } from './types.js';
 import {
   isValidationError,
@@ -40,6 +41,7 @@ const V2_MANIFEST_KEYS = new Set([
   'remoteMedia',
   'settings',
   'secrets',
+  'workers',
 ]);
 
 const ID = /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/;
@@ -564,6 +566,38 @@ function parseSecrets(
   );
 }
 
+function parseWorkers(
+  parsed: JsonObject,
+  pluginId: string,
+): readonly PluginWorkerDeclaration[] {
+  const values = parsed.workers === undefined
+    ? []
+    : requiredArray(parsed, 'workers', 4, pluginId);
+  const seen = new Set<string>();
+  return Object.freeze(values.map((value, index) => {
+    if (!isObject(value)) malformed(`workers[${index}] must be an object`, pluginId);
+    assertExactKeys(
+      value,
+      new Set(['path', 'sha256']),
+      `workers[${index}]`,
+      pluginId,
+    );
+    const path = requiredString(value, 'path', 240, pluginId);
+    if (
+      !/^\.\/workers\/(?:[A-Za-z0-9][A-Za-z0-9._-]{0,63}\/)*[A-Za-z0-9][A-Za-z0-9._-]{0,63}\.mjs$/u.test(path) ||
+      seen.has(path)
+    ) {
+      malformed(`workers[${index}].path must be a unique portable ./workers/*.mjs path`, pluginId);
+    }
+    seen.add(path);
+    const sha256 = requiredString(value, 'sha256', 64, pluginId);
+    if (!SHA256.test(sha256)) {
+      malformed(`workers[${index}].sha256 must be a lowercase SHA-256 digest`, pluginId);
+    }
+    return Object.freeze({ path, sha256 });
+  }));
+}
+
 function decodeManifestSource(source: string | Uint8Array): string {
   const byteLength =
     typeof source === 'string'
@@ -750,6 +784,7 @@ export function parsePluginManifest(
   const remoteMedia = parseRemoteMedia(parsed, id);
   const settings = parseSettings(parsed, id);
   const secrets = parseSecrets(parsed, id);
+  const workers = parseWorkers(parsed, id);
   const capabilitySet = new Set(capabilities);
   const declarationRequirements = [
     ['network', network.length],
@@ -786,5 +821,6 @@ export function parsePluginManifest(
     remoteMedia,
     settings,
     secrets,
+    workers,
   }) satisfies PluginManifestV2;
 }

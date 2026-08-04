@@ -28,6 +28,9 @@ export {
   MAX_PLUGIN_ICON_BYTES,
   MAX_PLUGIN_ICON_COUNT,
   MAX_PLUGIN_ICON_TOTAL_BYTES,
+  MAX_PLUGIN_WORKER_BYTES,
+  MAX_PLUGIN_WORKER_COUNT,
+  MAX_PLUGIN_WORKER_TOTAL_BYTES,
   type PluginCapability,
   type PluginNetworkMethod,
   type PluginNetworkDeclaration,
@@ -35,6 +38,7 @@ export {
   type PluginRemoteMediaDeclaration,
   type PluginSettingDeclaration,
   type PluginSecretDeclaration,
+  type PluginWorkerDeclaration,
   type PluginManifest,
   type PluginManifestV1,
   type PluginManifestV2,
@@ -44,4 +48,5 @@ export {
   type ValidatedPluginArtifact,
   type ValidatedPluginModule,
   type ValidatedPluginIcon,
+  type ValidatedPluginWorker,
 } from './types.js';

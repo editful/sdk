@@ -12,6 +12,9 @@ export const MAX_PLUGIN_BUNDLE_BYTES = 8 * 1024 * 1024;
 export const MAX_PLUGIN_ICON_BYTES = 64 * 1024;
 export const MAX_PLUGIN_ICON_COUNT = 16;
 export const MAX_PLUGIN_ICON_TOTAL_BYTES = 256 * 1024;
+export const MAX_PLUGIN_WORKER_BYTES = 4 * 1024 * 1024;
+export const MAX_PLUGIN_WORKER_COUNT = 4;
+export const MAX_PLUGIN_WORKER_TOTAL_BYTES = 12 * 1024 * 1024;
 
 export const PLUGIN_CAPABILITIES = Object.freeze([
   'node-kinds',
@@ -24,6 +27,7 @@ export const PLUGIN_CAPABILITIES = Object.freeze([
   'remote-media',
   'interaction-regions',
   'agent-actions',
+  'gpu-renderer',
 ] as const);
 
 export type PluginCapability = (typeof PLUGIN_CAPABILITIES)[number];
@@ -89,6 +93,12 @@ export interface PluginSecretDeclaration {
   readonly required: boolean;
 }
 
+/** A self-contained module worker retained beside the plugin entry. */
+export interface PluginWorkerDeclaration {
+  readonly path: string;
+  readonly sha256: string;
+}
+
 interface PluginManifestBase {
   readonly id: string;
   readonly name: string;
@@ -116,6 +126,7 @@ export interface PluginManifestV2 extends PluginManifestBase {
   readonly remoteMedia: readonly PluginRemoteMediaDeclaration[];
   readonly settings: readonly PluginSettingDeclaration[];
   readonly secrets: readonly PluginSecretDeclaration[];
+  readonly workers: readonly PluginWorkerDeclaration[];
 }
 
 export type PluginManifest = PluginManifestV1 | PluginManifestV2;
@@ -149,6 +160,11 @@ export interface ValidatedPluginIcon {
   readonly byteLength: number;
 }
 
+export interface ValidatedPluginWorker {
+  readonly path: string;
+  readonly module: ValidatedPluginModule;
+}
+
 export interface ValidatedPluginArtifact {
   /** Canonical path used only for diagnostics and discovery identity. */
   readonly directory: string;
@@ -157,6 +173,7 @@ export interface ValidatedPluginArtifact {
   readonly manifest: PluginManifest;
   readonly module: ValidatedPluginModule;
   readonly icons: readonly ValidatedPluginIcon[];
+  readonly workers: readonly ValidatedPluginWorker[];
 }
 
 export interface PluginArtifactValidationOptions

@@ -36,6 +36,7 @@ export function decodePluginModule(bytes: Uint8Array, pluginId: string): string 
 export async function validatePluginModuleSource(
   source: string,
   pluginId: string,
+  options: { readonly allowDynamicImports?: boolean } = {},
 ): Promise<void> {
   const comments: Comment[] = [];
   try {
@@ -78,7 +79,13 @@ export async function validatePluginModuleSource(
   }
 
   const runtimeImport = imports.find(
-    (entry) => entry.t !== ImportType.ImportMeta,
+    (entry) =>
+      entry.t !== ImportType.ImportMeta &&
+      !(
+        options.allowDynamicImports === true &&
+        (entry.t === ImportType.Dynamic ||
+          entry.t === ImportType.DynamicSourcePhase)
+      ),
   );
   if (runtimeImport !== undefined) {
     const specifier =

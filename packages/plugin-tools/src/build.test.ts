@@ -96,6 +96,39 @@ describe('plugin tools build', () => {
     ).toContain('<svg');
   });
 
+  it('bundles declared module workers into hashed self-contained artifacts', async () => {
+    const directory = await project(
+      'export default { register() {} };',
+      {
+        capabilities: ['gpu-renderer'],
+        assets: {
+          workers: [{
+            entry: './worker.ts',
+            output: './workers/render.mjs',
+          }],
+        },
+      },
+    );
+    await writeFile(
+      join(directory, 'worker.ts'),
+      'self.onmessage = () => undefined; export default {};',
+    );
+
+    const result = await buildPlugin({ projectDirectory: directory });
+    const worker = await readFile(
+      join(result.artifactDirectory, 'workers/render.mjs'),
+      'utf8',
+    );
+
+    expect(result.manifest.workers).toEqual([
+      expect.objectContaining({
+        path: './workers/render.mjs',
+        sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    ]);
+    expect(worker).not.toMatch(/(?:^|[;\n])\s*import\s+["']/u);
+  });
+
   it('checks without publishing and creates deterministic archives', async () => {
     const directory = await project('export default { register() {} };');
     const checked = await checkPlugin({ projectDirectory: directory });
