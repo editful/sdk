@@ -246,6 +246,8 @@ export interface PluginRendererHost {
   requestFrame(): void;
   /** Resolves a validated plugin artifact asset to a retained URL. */
   assetUrl(asset: string): string;
+  /** Current document records owned by a visible surface node. */
+  records(surfaceId: string): ReadonlyMap<string, string> | null;
 }
 
 /** Host-owned framebuffer and dimensions supplied for one surface render. */
@@ -888,6 +890,7 @@ export interface PackedNode<Kind = unknown> {
   readonly textPadding: number;
   readonly textVerticalAlign: number;
   readonly textSizing: number;
+  readonly recordsVersion: number;
   get<Value>(field: FieldHandle<Value, Kind>): Value;
 }
 
