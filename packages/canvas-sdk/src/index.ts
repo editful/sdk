@@ -37,10 +37,24 @@ export const Primitive = {
   RoundRect: 0,
   Ellipse: 1,
   None: 2,
+  Line: 3,
   TextBlock: 100,
   ImageQuad: 101,
 } as const;
 export type Primitive = (typeof Primitive)[keyof typeof Primitive];
+
+/** Endpoint styles packed into the procedural line primitive. */
+export const LineMarker = {
+  None: 0,
+  OpenArrow: 1,
+  SolidArrow: 2,
+  Cap: 3,
+} as const;
+export type LineMarker = (typeof LineMarker)[keyof typeof LineMarker];
+
+export function encodeLineMarkers(start: LineMarker, end: LineMarker): number {
+  return start + end * 4;
+}
 
 export const TextFont = {
   Sans: 0,
@@ -513,6 +527,13 @@ export interface PluginNodeSnapshot {
   readonly letterSpacing: number;
   readonly textPadding: number;
   readonly textVerticalAlign: TextVerticalAlign;
+  readonly bindings: readonly {
+    readonly role: string;
+    readonly type: string;
+    readonly parent: string;
+    readonly payload: PluginJson;
+  }[];
+  readonly records: { readonly version: number; readonly count: number };
   field<Value extends PluginScalar>(name: string): Value | undefined;
 }
 
@@ -566,6 +587,19 @@ export interface PluginDocumentTransaction {
   create(node: PluginNodeCreate): void;
   update(node: PluginNodeUpdate): void;
   delete(nodeId: string): void;
+  bind(options: {
+    readonly child: string;
+    readonly role: string;
+    readonly type: string;
+    readonly parent: string;
+    readonly payload: PluginJson;
+  }): this;
+  unbind(options: { readonly child: string; readonly role: string }): this;
+  setRecord(options: {
+    readonly node: string;
+    readonly recordId: string;
+    readonly value: PluginJson | null;
+  }): this;
   commit(): void;
 }
 
@@ -864,8 +898,50 @@ export interface PluginContext {
   editor(contribution: PluginEditorContribution): void;
   importer(contribution: PluginImporterContribution): void;
   action(contribution: PluginAgentActionContribution): void;
+  binding(type: string, definition: PluginBindingDefinition): void;
   /** Registers trusted same-context rendering under `gpu-renderer`. */
   renderer(contribution: PluginRendererContribution): void;
+}
+
+export interface PluginBindingNodeView {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly rotation: number;
+  field(key: string): PluginScalar | null;
+}
+
+export interface PluginBindingChildEdit {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly rotation: number;
+}
+
+export interface PluginBindingResolveResult {
+  readonly x?: number;
+  readonly y?: number;
+  readonly width?: number;
+  readonly height?: number;
+  readonly rotation?: number;
+  readonly fields?: Readonly<Record<string, PluginScalar>>;
+}
+
+export interface PluginBindingDefinition {
+  readonly roles: readonly string[];
+  readonly onParentRemoved: 'cascade' | 'unbind';
+  resolve(
+    child: PluginBindingNodeView,
+    parents: ReadonlyMap<string, PluginBindingNodeView>,
+    payloads: ReadonlyMap<string, PluginJson>,
+  ): PluginBindingResolveResult | null;
+  invert?(
+    edit: PluginBindingChildEdit,
+    parents: ReadonlyMap<string, PluginBindingNodeView>,
+    payloads: ReadonlyMap<string, PluginJson>,
+  ): Readonly<Record<string, PluginJson>> | null;
 }
 
 export interface PluginDefinition {
