@@ -299,6 +299,12 @@ export interface PluginSurfaceQueryResult {
   readonly features?: readonly PluginJson[];
 }
 
+export type PluginSurfaceFeatureDragPhase = 'start' | 'move' | 'end' | 'cancel';
+export type PluginSurfaceFeatureDragResult = boolean | {
+  readonly recordId: string;
+  readonly value: PluginJson;
+};
+
 /** One renderer runtime shared by every surface emitted for its contribution. */
 export interface PluginRendererInstance {
   /** Return true when another frame is required after this one. */
@@ -307,6 +313,11 @@ export interface PluginRendererInstance {
     target: PluginSurfaceRenderTarget,
   ): void | boolean;
   query?(query: PluginSurfaceQuery): PluginSurfaceQueryResult | null;
+  featureDrag?(
+    surfaceId: string,
+    phase: PluginSurfaceFeatureDragPhase,
+    point: PluginSurfacePoint,
+  ): PluginSurfaceFeatureDragResult;
   surfaceDisposed?(surfaceId: string): void;
   contextLost?(): void;
   contextRestored?(): void;
