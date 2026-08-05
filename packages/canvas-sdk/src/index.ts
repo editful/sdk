@@ -597,7 +597,8 @@ export interface PluginNodeUpdate {
 }
 
 export interface PluginDocumentTransaction {
-  create(node: PluginNodeCreate): void;
+  /** Stages a node and returns a transaction-local id usable by bind. */
+  create(node: PluginNodeCreate): string;
   update(node: PluginNodeUpdate): void;
   delete(nodeId: string): void;
   bind(options: {
