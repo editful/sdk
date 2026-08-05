@@ -248,6 +248,8 @@ export interface PluginRendererHost {
   assetUrl(asset: string): string;
   /** Current document records owned by a visible surface node. */
   records(surfaceId: string): ReadonlyMap<string, string> | null;
+  /** Writes an automatic renderer-owned cache record without adding user history. */
+  setRecord(surfaceId: string, recordId: string, value: PluginJson | null): boolean;
 }
 
 /** Host-owned framebuffer and dimensions supplied for one surface render. */
