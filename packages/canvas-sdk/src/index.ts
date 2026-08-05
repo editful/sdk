@@ -527,6 +527,7 @@ export interface PluginNodeSnapshot {
   readonly width: number;
   readonly height: number;
   readonly rotation: number;
+  readonly locked: boolean;
   readonly fill: number;
   readonly stroke: number;
   readonly strokeWidth: number;
@@ -580,6 +581,8 @@ export interface PluginNodeUpdate {
   readonly width?: number;
   readonly height?: number;
   readonly rotation?: number;
+  readonly locked?: boolean;
+  readonly sendToBack?: boolean;
   readonly fill?: number;
   readonly stroke?: number;
   readonly strokeWidth?: number;
