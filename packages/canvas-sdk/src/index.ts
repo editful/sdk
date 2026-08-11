@@ -210,6 +210,8 @@ export interface PluginRendererRequest {
   readonly headers?: PluginRendererHeaders;
   readonly body?: ArrayBuffer;
   readonly signal?: AbortSignal;
+  /** Host-injected active-board credential for a declared first-party origin. */
+  readonly auth?: 'board';
   /** Lower values are more urgent. */
   readonly priority?: number;
 }
@@ -242,12 +244,34 @@ export interface PluginRendererWorkers {
 export interface PluginRendererHost {
   /** The Editful-owned context. The host restores its state after each call. */
   readonly gl: WebGL2RenderingContext;
+  /** Active collaborative board identity; absent for a local-only document. */
+  readonly boardId?: string;
   readonly network: PluginRendererNetwork;
   readonly workers: PluginRendererWorkers;
   /** Schedules another host canvas frame without starting a private loop. */
   requestFrame(): void;
   /** Resolves a validated plugin artifact asset to a retained URL. */
   assetUrl(asset: string): string;
+  /** Current document records owned by a visible surface node. */
+  records(surfaceId: string): ReadonlyMap<string, string> | null;
+  /** Writes an automatic renderer-owned cache record without adding user history. */
+  setRecord(surfaceId: string, recordId: string, value: PluginJson | null): boolean;
+  /** Resolves an opaque document-scoped collection to its collaborative owner. */
+  recordCollection(collectionId: string, ownerKind: string): PluginRecordCollection | null;
+  /** Writes an automatic record in a document-scoped collaborative collection. */
+  setCollectionRecord(
+    collectionId: string,
+    ownerKind: string,
+    recordId: string,
+    value: PluginJson | null,
+  ): boolean;
+}
+
+export interface PluginRecordCollection {
+  /** Stable document node id used when a user action needs history. */
+  readonly ownerId: string;
+  readonly records: ReadonlyMap<string, string>;
+  readonly version: number;
 }
 
 /** Host-owned framebuffer and dimensions supplied for one surface render. */
@@ -262,6 +286,8 @@ export interface PluginSurfaceRenderTarget {
 export interface PluginSurfaceFrame {
   /** Stable for this document node while the renderer runtime is alive. */
   readonly surfaceId: string;
+  /** Stable public document node id that emitted this retained surface. */
+  readonly nodeId: string;
   readonly state: Readonly<Record<string, PluginJson>>;
   readonly cssWidth: number;
   readonly cssHeight: number;
@@ -289,6 +315,7 @@ export interface PluginSurfacePoint {
 
 export interface PluginSurfaceQuery {
   readonly surfaceId: string;
+  readonly nodeId: string;
   readonly state: Readonly<Record<string, PluginJson>>;
   /** Surface-local CSS pixels from its top-left corner. */
   readonly point: PluginSurfacePoint;
@@ -297,6 +324,62 @@ export interface PluginSurfaceQuery {
 export interface PluginSurfaceQueryResult {
   readonly cursor?: 'default' | 'pointer' | 'grab' | 'crosshair';
   readonly features?: readonly PluginJson[];
+  /** Optional short pointer-local status rendered in host chrome. */
+  readonly statusText?: string;
+  /**
+   * Optional host interaction for the topmost feature at the query point.
+   * The host treats the feature identity and editor state as opaque plugin
+   * data; it only coordinates selection, document writes, history and UI.
+   */
+  readonly interaction?: PluginSurfaceFeatureInteraction;
+}
+
+export interface PluginSurfaceChromeBadge {
+  readonly id: string;
+  readonly label: string;
+  readonly details?: string;
+  readonly href?: string;
+  readonly corner: 'bottom-right';
+}
+
+export interface PluginSurfaceChrome {
+  readonly badges?: readonly PluginSurfaceChromeBadge[];
+}
+
+export type PluginSurfaceFeatureDragPhase = 'start' | 'move' | 'end' | 'cancel';
+export interface PluginSurfaceRecordMutation {
+  readonly recordId: string;
+  readonly value: PluginJson;
+  /** Collaborative record owner; omitted for a surface-local record. */
+  readonly recordOwnerId?: string;
+  /** User-facing undo label owned by the plugin's domain vocabulary. */
+  readonly historyLabel: string;
+}
+
+export interface PluginSurfaceEditorRequest {
+  /** Manual editor contribution owned by the surface renderer's plugin. */
+  readonly editorId: string;
+  /** Opaque transient state copied and passed back to that editor. */
+  readonly state?: PluginJson;
+}
+
+export interface PluginSurfaceFeatureInteraction {
+  /** Stable plugin-owned identity for the interactive feature. */
+  readonly featureId: string;
+  readonly draggable?: boolean;
+  /** Current record state used to begin an undoable gesture. */
+  readonly record?: Omit<PluginSurfaceRecordMutation, 'historyLabel'>;
+  readonly editor?: PluginSurfaceEditorRequest;
+}
+
+export type PluginSurfaceFeatureDragResult = boolean | {
+  readonly mutation: PluginSurfaceRecordMutation;
+  readonly editor?: PluginSurfaceEditorRequest;
+};
+
+export interface PluginSurfacePlacementResult {
+  readonly mutation: PluginSurfaceRecordMutation;
+  readonly selection?: PluginSurfaceFeatureInteraction;
 }
 
 /** One renderer runtime shared by every surface emitted for its contribution. */
@@ -307,6 +390,22 @@ export interface PluginRendererInstance {
     target: PluginSurfaceRenderTarget,
   ): void | boolean;
   query?(query: PluginSurfaceQuery): PluginSurfaceQueryResult | null;
+  featureDrag?(
+    surfaceId: string,
+    phase: PluginSurfaceFeatureDragPhase,
+    point: PluginSurfacePoint,
+  ): PluginSurfaceFeatureDragResult;
+  /** Handles a create-tool placement without exposing domain data to core. */
+  place?(
+    surfaceId: string,
+    nodeId: string,
+    kindId: string,
+    point: PluginSurfacePoint,
+  ): PluginSurfacePlacementResult | false;
+  /** Clears renderer-owned selection visuals for one surface. */
+  clearFeatureSelection?(surfaceId: string): void;
+  /** Returns domain-owned labels/links positioned by generic host chrome. */
+  chrome?(surfaceId: string): PluginSurfaceChrome | null;
   surfaceDisposed?(surfaceId: string): void;
   contextLost?(): void;
   contextRestored?(): void;
@@ -518,6 +617,7 @@ export interface PluginNodeSnapshot {
   readonly width: number;
   readonly height: number;
   readonly rotation: number;
+  readonly locked: boolean;
   readonly fill: number;
   readonly stroke: number;
   readonly strokeWidth: number;
@@ -531,6 +631,13 @@ export interface PluginNodeSnapshot {
   readonly letterSpacing: number;
   readonly textPadding: number;
   readonly textVerticalAlign: TextVerticalAlign;
+  readonly bindings: readonly {
+    readonly role: string;
+    readonly type: string;
+    readonly parent: string;
+    readonly payload: PluginJson;
+  }[];
+  readonly records: { readonly version: number; readonly count: number };
   field<Value extends PluginScalar>(name: string): Value | undefined;
 }
 
@@ -564,6 +671,8 @@ export interface PluginNodeUpdate {
   readonly width?: number;
   readonly height?: number;
   readonly rotation?: number;
+  readonly locked?: boolean;
+  readonly sendToBack?: boolean;
   readonly fill?: number;
   readonly stroke?: number;
   readonly strokeWidth?: number;
@@ -581,15 +690,42 @@ export interface PluginNodeUpdate {
 }
 
 export interface PluginDocumentTransaction {
-  create(node: PluginNodeCreate): void;
+  /** Stages a node and returns a transaction-local id usable by bind. */
+  create(node: PluginNodeCreate): string;
   update(node: PluginNodeUpdate): void;
   delete(nodeId: string): void;
+  bind(options: {
+    readonly child: string;
+    readonly role: string;
+    readonly type: string;
+    readonly parent: string;
+    readonly payload: PluginJson;
+  }): this;
+  unbind(options: { readonly child: string; readonly role: string }): this;
+  setRecord(options: {
+    readonly node: string;
+    readonly recordId: string;
+    readonly value: PluginJson | null;
+  }): this;
+  setCollectionRecord(options: {
+    readonly collectionId: string;
+    readonly ownerKind: string;
+    readonly recordId: string;
+    readonly value: PluginJson | null;
+  }): this;
   commit(): void;
 }
 
 export interface PluginDocument {
   readonly revision: number;
   inspect(nodeIds: readonly string[]): readonly PluginNodeSnapshot[];
+  /** Reads a bounded projection of one declared kind. */
+  inspectKind(kindId: string, limit?: number): readonly PluginNodeSnapshot[];
+  /** Reads one opaque document-scoped collaborative collection. */
+  recordCollection(
+    collectionId: string,
+    ownerKind: string,
+  ): PluginRecordCollection | null;
   transaction(label: string): PluginDocumentTransaction;
 }
 
@@ -872,6 +1008,7 @@ export interface PackedNode<Kind = unknown> {
   readonly textPadding: number;
   readonly textVerticalAlign: number;
   readonly textSizing: number;
+  readonly recordsVersion: number;
   get<Value>(field: FieldHandle<Value, Kind>): Value;
 }
 
@@ -882,8 +1019,50 @@ export interface PluginContext {
   editor(contribution: PluginEditorContribution): void;
   importer(contribution: PluginImporterContribution): void;
   action(contribution: PluginAgentActionContribution): void;
+  binding(type: string, definition: PluginBindingDefinition): void;
   /** Registers trusted same-context rendering under `gpu-renderer`. */
   renderer(contribution: PluginRendererContribution): void;
+}
+
+export interface PluginBindingNodeView {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly rotation: number;
+  field(key: string): PluginScalar | null;
+}
+
+export interface PluginBindingChildEdit {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly rotation: number;
+}
+
+export interface PluginBindingResolveResult {
+  readonly x?: number;
+  readonly y?: number;
+  readonly width?: number;
+  readonly height?: number;
+  readonly rotation?: number;
+  readonly fields?: Readonly<Record<string, PluginScalar>>;
+}
+
+export interface PluginBindingDefinition {
+  readonly roles: readonly string[];
+  readonly onParentRemoved: 'cascade' | 'unbind';
+  resolve(
+    child: PluginBindingNodeView,
+    parents: ReadonlyMap<string, PluginBindingNodeView>,
+    payloads: ReadonlyMap<string, PluginJson>,
+  ): PluginBindingResolveResult | null;
+  invert?(
+    edit: PluginBindingChildEdit,
+    parents: ReadonlyMap<string, PluginBindingNodeView>,
+    payloads: ReadonlyMap<string, PluginJson>,
+  ): Readonly<Record<string, PluginJson>> | null;
 }
 
 export interface PluginDefinition {
