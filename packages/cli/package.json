@@ -1,6 +1,6 @@
 {
   "name": "@editful/cli",
-  "version": "0.10.0",
+  "version": "0.12.0",
   "description": "Create and manage Editful canvas plugin projects.",
   "license": "MIT",
   "repository": {

@@ -1,5 +1,24 @@
 # @editful/plugin-tools
 
+## 0.12.0
+
+### Patch Changes
+
+- @editful/plugin-artifact@0.12.0
+
+## 0.11.0
+
+### Minor Changes
+
+- c0a9445: Add capability-gated retained WebGL surface renderers, renderer-lifetime I/O
+  and worker services, rendered-feature queries, and validated bundled module
+  worker assets for high-performance canvas plugins.
+
+### Patch Changes
+
+- Updated dependencies [c0a9445]
+  - @editful/plugin-artifact@0.11.0
+
 ## 0.10.0
 
 ### Patch Changes

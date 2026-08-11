@@ -99,6 +99,12 @@ legacy asset-id argument or `{ url }`. Remote URLs belong in plugin-declared
 fields. Attribution is not part of the SDK's image or GL records: plugins own
 any source metadata and render it with generic text and interaction regions.
 
+`Primitive.Line` draws a procedural straight line through `out.quad`. Pass
+`encodeLineMarkers(start, end)` as the quad's `cornerRadius` value to select
+`LineMarker.None`, `OpenArrow`, `SolidArrow`, or `Cap` independently at either
+endpoint. A toolbar create contribution can opt into two-point placement with
+`geometry: 'line'`; the host stores the result as centre, length, and rotation.
+
 Enabled plugins use an Obsidian-style trust model and are trusted local code.
 The APIs stay narrow for compatibility, auditability, and defense in depth;
 they are not a promise of hostile-code isolation. An `editor-ui` plugin may

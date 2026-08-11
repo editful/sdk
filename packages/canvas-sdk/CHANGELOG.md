@@ -1,5 +1,19 @@
 # @editful/canvas-sdk
 
+## 0.12.0
+
+### Minor Changes
+
+- c0866ff: Expose procedural line primitives, endpoint marker encoding, and two-point line creation geometry.
+
+## 0.11.0
+
+### Minor Changes
+
+- c0a9445: Add capability-gated retained WebGL surface renderers, renderer-lifetime I/O
+  and worker services, rendered-feature queries, and validated bundled module
+  worker assets for high-performance canvas plugins.
+
 ## 0.10.0
 
 ### Minor Changes
