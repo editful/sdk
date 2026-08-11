@@ -1,5 +1,14 @@
 # @editful/canvas-sdk
 
+## 0.13.0
+
+### Minor Changes
+
+- 6cc48d0: Add map-agnostic retained-surface feature interactions, placement mutations,
+  manual editor requests, board-scoped renderer services, and document collection
+  inspection so domain plugins can remain outside Editful core.
+- 6cc48d0: Add plugin binding registration and document transaction relation/record APIs.
+
 ## 0.12.0
 
 ### Minor Changes
