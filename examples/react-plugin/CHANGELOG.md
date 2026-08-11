@@ -1,5 +1,13 @@
 # editful-react-plugin-example
 
+## 1.0.6
+
+### Patch Changes
+
+- Updated dependencies [6cc48d0]
+- Updated dependencies [6cc48d0]
+  - @editful/canvas-sdk@0.13.0
+
 ## 1.0.5
 
 ### Patch Changes

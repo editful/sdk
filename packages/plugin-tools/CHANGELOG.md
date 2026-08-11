@@ -1,5 +1,16 @@
 # @editful/plugin-tools
 
+## 0.13.0
+
+### Minor Changes
+
+- 6cc48d0: Add plugin binding registration and document transaction relation/record APIs.
+
+### Patch Changes
+
+- Updated dependencies [6cc48d0]
+  - @editful/plugin-artifact@0.13.0
+
 ## 0.12.0
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @editful/cli
 
+## 0.13.0
+
+### Minor Changes
+
+- 6cc48d0: Add plugin binding registration and document transaction relation/record APIs.
+
 ## 0.12.0
 
 ## 0.11.0
