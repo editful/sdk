@@ -430,6 +430,40 @@ export type PackFunction<Kind = unknown> = (
   out: PrimitiveWriter,
 ) => void;
 
+declare const BACKGROUND_STATE: unique symbol;
+export interface PluginBackgroundHandle<State extends PluginJson = PluginJson> {
+  readonly id: string;
+  readonly label: string;
+  readonly [BACKGROUND_STATE]: State;
+}
+
+export type PluginBackgroundStatus<State extends PluginJson = PluginJson> =
+  | { readonly status: 'vacant' }
+  | { readonly status: 'owned'; readonly state: State }
+  | {
+      readonly status: 'occupied';
+      readonly pluginId: string;
+      readonly contributionId: string;
+      readonly label: string;
+    };
+
+export interface PluginBackgroundSurfaceContribution<
+  Kind = unknown,
+  State extends PluginJson = PluginJson,
+> {
+  readonly id: string;
+  readonly label: string;
+  readonly stateSchema: Readonly<Record<string, PluginJson>>;
+  readonly sourceKind: string;
+  sourceNodeId(state: State): string;
+  pack(
+    source: PackedNode<Kind>,
+    state: State,
+    services: PackServices,
+    out: PrimitiveWriter,
+  ): void;
+}
+
 export interface CreateContribution {
   readonly label: string;
   readonly icon?: string;
@@ -713,6 +747,11 @@ export interface PluginDocumentTransaction {
     readonly recordId: string;
     readonly value: PluginJson | null;
   }): this;
+  claimBackground<State extends PluginJson>(
+    handle: PluginBackgroundHandle<State>,
+    state: NoInfer<State>,
+  ): this;
+  releaseBackground(handle: PluginBackgroundHandle): this;
   commit(): void;
 }
 
@@ -726,6 +765,9 @@ export interface PluginDocument {
     collectionId: string,
     ownerKind: string,
   ): PluginRecordCollection | null;
+  background<State extends PluginJson>(
+    handle: PluginBackgroundHandle<State>,
+  ): PluginBackgroundStatus<State>;
   transaction(label: string): PluginDocumentTransaction;
 }
 
@@ -877,6 +919,13 @@ export interface PluginCommandContribution {
     readonly maximum?: number;
     readonly kinds?: readonly string[];
   };
+  readonly contextMenu?:
+    | { readonly target: 'selection' }
+    | { readonly target: 'background'; readonly background: PluginBackgroundHandle };
+  readonly background?: {
+    readonly handle: PluginBackgroundHandle;
+    readonly status: 'vacant' | 'owned';
+  };
   run(context: PluginActionContext): Promise<void>;
 }
 
@@ -961,6 +1010,7 @@ export interface PluginEditorContribution {
     readonly maximum?: number;
     readonly kinds?: readonly string[];
   };
+  readonly background?: PluginBackgroundHandle;
   /**
    * Mounts trusted plugin UI directly into Editful's renderer. Plugins may use
    * plain DOM or mount a bundled React root and must release owned resources.
@@ -969,6 +1019,11 @@ export interface PluginEditorContribution {
     container: HTMLElement,
     context: PluginActionContext,
   ): void | (() => void) | PluginEditorInstance;
+}
+
+export interface PluginMigrationContribution {
+  readonly id: string;
+  run(context: PluginActionContext): Promise<'unchanged' | 'migrated'>;
 }
 
 export interface KindBuilder<Kind = unknown> {
@@ -1020,6 +1075,10 @@ export interface PluginContext {
   importer(contribution: PluginImporterContribution): void;
   action(contribution: PluginAgentActionContribution): void;
   binding(type: string, definition: PluginBindingDefinition): void;
+  backgroundSurface<Kind = unknown, State extends PluginJson = PluginJson>(
+    contribution: PluginBackgroundSurfaceContribution<Kind, State>,
+  ): PluginBackgroundHandle<State>;
+  migration(contribution: PluginMigrationContribution): void;
   /** Registers trusted same-context rendering under `gpu-renderer`. */
   renderer(contribution: PluginRendererContribution): void;
 }
@@ -1030,6 +1089,7 @@ export interface PluginBindingNodeView {
   readonly width: number;
   readonly height: number;
   readonly rotation: number;
+  readonly presentation: 'node' | 'background-source';
   field(key: string): PluginScalar | null;
 }
 
