@@ -1,5 +1,11 @@
 # @editful/canvas-sdk
 
+## 0.14.0
+
+### Minor Changes
+
+- 1f052b2: Add generic board-background surfaces, guarded lease transactions, context-menu metadata, and plugin migrations.
+
 ## 0.13.0
 
 ### Minor Changes
