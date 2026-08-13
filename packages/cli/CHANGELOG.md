@@ -1,5 +1,13 @@
 # @editful/cli
 
+## 0.15.0
+
+### Minor Changes
+
+- 9236987: Let hosts accept an inclusive range of plugin SDK versions, remove the future
+  app-version ceiling from newly built plugin manifests, and continue accepting
+  legacy `maxAppVersion` fields without enforcing them.
+
 ## 0.14.0
 
 ## 0.13.0
