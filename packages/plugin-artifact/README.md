@@ -33,7 +33,6 @@ symlinks, and active embedded content.
   "entry": "plugin.mjs",
   "sdkVersion": "0.9.0",
   "minAppVersion": "0.9.0",
-  "maxAppVersion": "0.10.0",
   "capabilities": ["node-kinds"],
   "entrySha256": "<64 lowercase hex characters>",
   "author": "Example Team",
@@ -42,9 +41,12 @@ symlinks, and active embedded content.
 }
 ```
 
-The app range is lower-inclusive and upper-exclusive. SDK compatibility is
-exact. Schema 1 supports only `node-kinds` and remains permanently accepted
-during the schema-2 compatibility window.
+The plugin's app requirement is lower-inclusive with no upper bound. The host
+owns an inclusive SDK compatibility range, allowing newer Editful releases to
+keep running older plugin contracts. Legacy manifests containing
+`maxAppVersion` remain accepted, but current hosts ignore that field. Schema 1
+supports only `node-kinds` and remains permanently accepted during the schema-2
+compatibility window.
 
 ## Manifest schema 2
 
@@ -71,7 +73,8 @@ per-plugin sandbox.
 const cache = new PluginArtifactCache();
 const artifact = await validatePluginArtifact(directory, {
   appVersion: '0.9.0',
-  sdkVersion: '0.9.0',
+  minSdkVersion: '0.8.0',
+  maxSdkVersion: '0.9.0',
   cache,
 });
 
