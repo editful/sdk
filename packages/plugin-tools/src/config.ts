@@ -63,7 +63,8 @@ export interface EditfulPluginConfig {
   /** Inferred from the installed SDK when omitted. */
   readonly sdkVersion?: string;
   readonly minAppVersion: string;
-  readonly maxAppVersion: string;
+  /** @deprecated Accepted for source compatibility and omitted from builds. */
+  readonly maxAppVersion?: string;
   readonly capabilities: readonly PluginCapability[];
   readonly network?: readonly PluginNetworkDeclaration[];
   readonly remoteMedia?: readonly PluginRemoteMediaDeclaration[];
@@ -140,7 +141,6 @@ export async function loadPluginConfig(
     description: requiredString(raw.description, 'description'),
     version: requiredString(raw.version, 'version'),
     minAppVersion: requiredString(raw.minAppVersion, 'minAppVersion'),
-    maxAppVersion: requiredString(raw.maxAppVersion, 'maxAppVersion'),
     capabilities,
     sdkVersion,
     projectDirectory: project,

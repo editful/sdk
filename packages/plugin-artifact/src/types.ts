@@ -107,7 +107,6 @@ interface PluginManifestBase {
   readonly entry: 'plugin.mjs';
   readonly sdkVersion: string;
   readonly minAppVersion: string;
-  readonly maxAppVersion: string;
   readonly entrySha256: string;
   readonly author?: string;
   readonly homepage?: string;
@@ -134,8 +133,10 @@ export type PluginManifest = PluginManifestV1 | PluginManifestV2;
 export interface PluginCompatibilityContext {
   /** Stable host application SemVer. */
   readonly appVersion: string;
-  /** Exact public SDK package/contract version accepted by this host. */
-  readonly sdkVersion: string;
+  /** Oldest public SDK contract this host still implements, inclusive. */
+  readonly minSdkVersion: string;
+  /** Newest public SDK contract this host implements, inclusive. */
+  readonly maxSdkVersion: string;
 }
 
 /**

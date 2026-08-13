@@ -631,10 +631,16 @@ export function parsePluginManifest(
   context: PluginCompatibilityContext,
 ): PluginManifest {
   const appVersion = hostStableVersion(context.appVersion, 'host appVersion');
-  if (!SEMVER.test(context.sdkVersion)) {
-    throw new TypeError(
-      `host sdkVersion must be valid SemVer; received ${JSON.stringify(context.sdkVersion)}`,
-    );
+  const minimumSdk = hostStableVersion(
+    context.minSdkVersion,
+    'host minSdkVersion',
+  );
+  const maximumSdk = hostStableVersion(
+    context.maxSdkVersion,
+    'host maxSdkVersion',
+  );
+  if (compareVersions(minimumSdk, maximumSdk) > 0) {
+    throw new TypeError('host minSdkVersion must not exceed maxSdkVersion');
   }
 
   let parsed: unknown;
@@ -695,35 +701,31 @@ export function parsePluginManifest(
     );
   }
 
-  const sdkVersion = semver(
-    requiredString(parsed, 'sdkVersion', 64, id),
-    'sdkVersion',
-    id,
-  );
-  if (sdkVersion !== context.sdkVersion) {
+  const sdkVersion = requiredString(parsed, 'sdkVersion', 64, id);
+  const pluginSdk = stableVersion(sdkVersion, 'sdkVersion', id);
+  if (
+    compareVersions(pluginSdk, minimumSdk) < 0 ||
+    compareVersions(pluginSdk, maximumSdk) > 0
+  ) {
     throw validationError(
       'incompatible',
       'SDK_INCOMPATIBLE',
-      `Plugin ${JSON.stringify(id)} requires SDK ${sdkVersion}; host provides ${context.sdkVersion}`,
+      `Plugin ${JSON.stringify(id)} uses SDK ${sdkVersion}; host supports >=${context.minSdkVersion} <=${context.maxSdkVersion}`,
       { pluginId: id },
     );
   }
 
   const minAppVersion = requiredString(parsed, 'minAppVersion', 64, id);
-  const maxAppVersion = requiredString(parsed, 'maxAppVersion', 64, id);
   const minimum = stableVersion(minAppVersion, 'minAppVersion', id);
-  const maximum = stableVersion(maxAppVersion, 'maxAppVersion', id);
-  if (compareVersions(minimum, maximum) >= 0) {
-    malformed('minAppVersion must be lower than maxAppVersion', id);
+  const legacyMaxAppVersion = optionalString(parsed, 'maxAppVersion', 64, id);
+  if (legacyMaxAppVersion !== undefined) {
+    stableVersion(legacyMaxAppVersion, 'maxAppVersion', id);
   }
-  if (
-    compareVersions(appVersion, minimum) < 0 ||
-    compareVersions(appVersion, maximum) >= 0
-  ) {
+  if (compareVersions(appVersion, minimum) < 0) {
     throw validationError(
       'incompatible',
       'APP_INCOMPATIBLE',
-      `Plugin ${JSON.stringify(id)} is incompatible with app ${context.appVersion} (requires >=${minAppVersion} <${maxAppVersion})`,
+      `Plugin ${JSON.stringify(id)} is incompatible with app ${context.appVersion} (requires >=${minAppVersion})`,
       { pluginId: id },
     );
   }
@@ -747,7 +749,6 @@ export function parsePluginManifest(
     entry: PLUGIN_ENTRY_FILE,
     sdkVersion,
     minAppVersion,
-    maxAppVersion,
     entrySha256,
     ...(author === undefined ? {} : { author }),
     ...(homepage === undefined ? {} : { homepage }),

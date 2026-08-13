@@ -24,7 +24,8 @@ import {
 
 const CONTEXT = {
   appVersion: '0.6.0',
-  sdkVersion: '0.6.0',
+  minSdkVersion: '0.5.0',
+  maxSdkVersion: '0.6.0',
 } as const;
 const VALID_SOURCE = 'export default { register() {} };\n';
 
@@ -45,7 +46,6 @@ function manifest(
     entry: 'plugin.mjs',
     sdkVersion: '0.6.0',
     minAppVersion: '0.6.0',
-    maxAppVersion: '0.7.0',
     capabilities: ['node-kinds'],
     entrySha256: digest(source),
     ...overrides,
@@ -180,12 +180,6 @@ describe('plugin manifest schema 1', () => {
       category: 'unsupported',
     },
     {
-      name: 'invalid compatibility range',
-      overrides: { minAppVersion: '0.7.0', maxAppVersion: '0.7.0' },
-      code: 'MANIFEST_FIELD_INVALID',
-      category: 'malformed',
-    },
-    {
       name: 'bad metadata URL',
       overrides: { homepage: 'file:///tmp/plugin' },
       code: 'MANIFEST_FIELD_INVALID',
@@ -203,7 +197,7 @@ describe('plugin manifest schema 1', () => {
     );
   });
 
-  it('gates the lower-inclusive and upper-exclusive app range', async () => {
+  it('gates the lower-inclusive app requirement without a future ceiling', async () => {
     const source = JSON.stringify(manifest());
     expect(
       parsePluginManifest(source, {
@@ -211,11 +205,17 @@ describe('plugin manifest schema 1', () => {
         appVersion: '0.6.0',
       }).id,
     ).toBe('fixture:status-card');
+    expect(
+      parsePluginManifest(source, {
+        ...CONTEXT,
+        appVersion: '9.0.0',
+      }).id,
+    ).toBe('fixture:status-card');
     await expectDiagnostic(
       Promise.resolve().then(() =>
         parsePluginManifest(source, {
           ...CONTEXT,
-          appVersion: '0.7.0',
+          appVersion: '0.5.9',
         }),
       ),
       'APP_INCOMPATIBLE',
@@ -252,17 +252,40 @@ describe('plugin manifest schema 1', () => {
     expect(parsed.source).toBe('https://example.com/ab');
   });
 
-  it('requires an exact SDK version', async () => {
+  it('accepts SDK versions inside the inclusive host-owned range', async () => {
+    expect(
+      parsePluginManifest(
+        JSON.stringify(manifest(VALID_SOURCE, { sdkVersion: '0.5.0' })),
+        CONTEXT,
+      ).sdkVersion,
+    ).toBe('0.5.0');
+    expect(
+      parsePluginManifest(
+        JSON.stringify(manifest(VALID_SOURCE, { sdkVersion: '0.6.0' })),
+        CONTEXT,
+      ).sdkVersion,
+    ).toBe('0.6.0');
+  });
+
+  it.each(['0.4.9', '0.6.1'])('rejects SDK %s outside the host range', async (sdkVersion) => {
     await expectDiagnostic(
       Promise.resolve().then(() =>
         parsePluginManifest(
-          JSON.stringify(manifest(VALID_SOURCE, { sdkVersion: '0.6.1' })),
+          JSON.stringify(manifest(VALID_SOURCE, { sdkVersion })),
           CONTEXT,
         ),
       ),
       'SDK_INCOMPATIBLE',
       'incompatible',
     );
+  });
+
+  it('accepts and ignores a legacy maxAppVersion ceiling', () => {
+    const parsed = parsePluginManifest(
+      JSON.stringify(manifest(VALID_SOURCE, { maxAppVersion: '0.7.0' })),
+      { ...CONTEXT, appVersion: '9.0.0' },
+    );
+    expect(parsed).not.toHaveProperty('maxAppVersion');
   });
 
   it('rejects invalid UTF-8 and the byte limit before JSON parsing', async () => {
@@ -390,7 +413,6 @@ describe('plugin artifact filesystem validation', () => {
   it('reports incompatibility before inspecting invalid module syntax', async () => {
     const artifact = await temporaryArtifact('export default {', {
       minAppVersion: '0.7.0',
-      maxAppVersion: '0.8.0',
     });
     try {
       await expectDiagnostic(

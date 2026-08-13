@@ -7,7 +7,6 @@ export default definePluginConfig({
   version: '1.0.0',
   entry: './src/index.tsx',
   minAppVersion: '0.9.0',
-  maxAppVersion: '0.10.0',
   capabilities: ['commands', 'editor-ui'],
   assets: { icons: ['./assets/spark.svg'] },
 });

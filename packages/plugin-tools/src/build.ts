@@ -161,7 +161,8 @@ async function buildInto(
   );
   const validated = await validatePluginArtifact(directory, {
     appVersion: config.minAppVersion,
-    sdkVersion: config.sdkVersion,
+    minSdkVersion: config.sdkVersion,
+    maxSdkVersion: config.sdkVersion,
   });
   return Object.freeze({
     artifactDirectory: directory,
@@ -185,7 +186,6 @@ function createManifest(
     entry: 'plugin.mjs',
     sdkVersion: config.sdkVersion,
     minAppVersion: config.minAppVersion,
-    maxAppVersion: config.maxAppVersion,
     capabilities: config.capabilities,
     entrySha256: createHash('sha256').update(source).digest('hex'),
     ...(config.author === undefined ? {} : { author: config.author }),

@@ -28,7 +28,6 @@ async function project(
       version: '1.2.3',
       entry: './index.tsx',
       minAppVersion: '0.8.0',
-      maxAppVersion: '0.9.0',
       capabilities: ['editor-ui'],
       ...overrides,
     })};\n`,
@@ -65,10 +64,11 @@ describe('plugin tools build', () => {
     );
     const manifest = JSON.parse(
       await readFile(join(result.artifactDirectory, 'plugin.json'), 'utf8'),
-    ) as { id: string; sdkVersion: string; entrySha256: string };
+    ) as { id: string; sdkVersion: string; entrySha256: string; maxAppVersion?: string };
 
     expect(manifest.id).toBe('fixture:react-editor');
     expect(manifest.sdkVersion).toBe('0.9.0');
+    expect(manifest.maxAppVersion).toBeUndefined();
     expect(manifest.entrySha256).toMatch(/^[a-f0-9]{64}$/);
     expect(source).not.toMatch(/(?:^|[;\n])\s*import\s/u);
     expect(result.bundleBytes).toBeLessThan(400_000);

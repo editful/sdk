@@ -7,7 +7,8 @@ import {
 
 const CONTEXT = {
   appVersion: '0.6.0',
-  sdkVersion: '0.6.0',
+  minSdkVersion: '0.5.0',
+  maxSdkVersion: '0.6.0',
 } as const;
 
 function manifest(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -20,7 +21,6 @@ function manifest(overrides: Record<string, unknown> = {}): Record<string, unkno
     entry: 'plugin.mjs',
     sdkVersion: '0.6.0',
     minAppVersion: '0.6.0',
-    maxAppVersion: '0.7.0',
     capabilities: [
       'node-kinds',
       'commands',

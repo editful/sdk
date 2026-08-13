@@ -12,7 +12,6 @@ function manifest(settings: unknown[]) {
     entry: 'plugin.mjs',
     sdkVersion: '0.6.0',
     minAppVersion: '0.6.0',
-    maxAppVersion: '0.7.0',
     entrySha256: 'a'.repeat(64),
     capabilities: ['configuration', 'secrets'],
     network: [],
@@ -24,7 +23,11 @@ function manifest(settings: unknown[]) {
       description: 'Key',
       required: true,
     }],
-  }), { appVersion: '0.6.0', sdkVersion: '0.6.0' });
+  }), {
+    appVersion: '0.6.0',
+    minSdkVersion: '0.5.0',
+    maxSdkVersion: '0.6.0',
+  });
 }
 
 describe('validatePluginSettings', () => {
@@ -96,10 +99,13 @@ describe('validatePluginSettings', () => {
       entry: 'plugin.mjs',
       sdkVersion: '0.6.0',
       minAppVersion: '0.6.0',
-      maxAppVersion: '0.7.0',
       entrySha256: 'b'.repeat(64),
       capabilities: ['node-kinds'],
-    }), { appVersion: '0.6.0', sdkVersion: '0.6.0' });
+    }), {
+      appVersion: '0.6.0',
+      minSdkVersion: '0.5.0',
+      maxSdkVersion: '0.6.0',
+    });
     expect(validatePluginSettings(schema, { old: true })).toEqual({
       values: {},
       invalidKeys: [],
