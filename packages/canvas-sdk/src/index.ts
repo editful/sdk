@@ -1010,6 +1010,14 @@ export interface PluginEditorContribution {
     readonly maximum?: number;
     readonly kinds?: readonly string[];
   };
+  /**
+   * Shows the editor only while this plugin owns the background, in addition
+   * to its activation and selection requirements. An automatic background
+   * editor stays mounted for as long as the background is owned, which keeps
+   * a persistent panel without a command; pair it with
+   * `selection: { maximum: 0 }` to yield to node editors once the user selects
+   * something. Automatic background editors require Editful 0.14 or later.
+   */
   readonly background?: PluginBackgroundHandle;
   /**
    * Mounts trusted plugin UI directly into Editful's renderer. Plugins may use
