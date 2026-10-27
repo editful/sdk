@@ -1,5 +1,11 @@
 # @editful/plugin-tools
 
+## 0.16.0
+
+### Patch Changes
+
+- @editful/plugin-artifact@0.16.0
+
 ## 0.15.1
 
 ### Patch Changes
