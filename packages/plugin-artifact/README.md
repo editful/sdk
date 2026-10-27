@@ -54,8 +54,10 @@ Schema 2 adds explicit capability declarations for `commands`, `importers`,
 `network`, `configuration`, `secrets`, `remote-media`,
 `interaction-regions`, `agent-actions`, `gpu-renderer`, and
 `external-scripts`. Network, remote-media, and script entries use exact HTTPS
-origins—wildcards, credentials, ports, paths, queries, and fragments are
-rejected. Settings use bounded scalar defaults and secret settings contain only
+origins whose hostname is lowercase DNS letters, digits, hyphens, and dots
+(punycode for international names)—wildcards, credentials, ports, paths,
+queries, fragments, and any other host characters are rejected, because hosts
+copy these origins into content security policies. Settings use bounded scalar defaults and secret settings contain only
 named references, never secret values.
 
 ### External scripts

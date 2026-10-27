@@ -50,6 +50,11 @@ const V2_MANIFEST_KEYS = new Set([
 const ID = /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/;
 const DECLARATION_KEY = /^[a-z][a-z0-9-]*$/;
 const SHA256 = /^[a-f0-9]{64}$/;
+// Lowercase LDH DNS labels (punycode included). Origins are pasted into host
+// content security policies, so nothing else may reach them: WHATWG URL
+// parsing alone admits hosts such as `x;sandbox`, `x,script-src`, or `x"y`.
+const LDH_HOSTNAME =
+  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/u;
 const STABLE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 // SemVer 2.0.0, including optional pre-release and build identifiers.
 const SEMVER =
@@ -261,10 +266,11 @@ function exactHttpsOrigin(
     url.pathname !== '/' ||
     url.search !== '' ||
     url.hash !== '' ||
-    value !== url.origin
+    value !== url.origin ||
+    !LDH_HOSTNAME.test(url.hostname)
   ) {
     malformed(
-      `${key} must be a canonical HTTPS origin without credentials, port, path, query, fragment, or wildcard`,
+      `${key} must be a canonical HTTPS origin with a lowercase DNS hostname and no credentials, port, path, query, fragment, or wildcard`,
       pluginId,
     );
   }

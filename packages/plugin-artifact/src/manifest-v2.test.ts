@@ -355,6 +355,45 @@ describe('plugin manifest schema 2', () => {
     });
   });
 
+  describe.each([
+    'https://maps.example.com;sandbox',
+    'https://x,script-src',
+    'https://x"y',
+    "https://x$'y",
+    'https://x$&y',
+    'https://x_y.example.com',
+    'https://-x.example.com',
+    'https://example.com.',
+  ])('origin %s', (origin) => {
+    it.each([
+      ['network', { network: [{ origin, methods: ['GET'], purpose: 'Data' }] }],
+      [
+        'remoteMedia',
+        { remoteMedia: [{ origin, mediaTypes: ['image/jpeg'], purpose: 'Images' }] },
+      ],
+      [
+        'scripts',
+        {
+          capabilities: [...(manifest().capabilities as string[]), 'external-scripts'],
+          scripts: [{ origin, purpose: 'Run code' }],
+        },
+      ],
+    ])('is rejected in %s', (key, overrides) => {
+      expect(() => parse(overrides)).toThrow(
+        new RegExp(`^${key}\\[0\\]\\.origin must be a canonical HTTPS origin with a lowercase DNS hostname`, 'u'),
+      );
+    });
+  });
+
+  it('accepts punycode and numeric DNS labels', () => {
+    const parsed = parse({
+      network: [{ origin: 'https://xn--bcher-kva.example', methods: ['GET'], purpose: 'Data' }],
+      remoteMedia: [{ origin: 'https://cdn1.example-images.com', mediaTypes: ['image/png'], purpose: 'Images' }],
+    });
+    if (parsed.schemaVersion !== 2) throw new Error('expected schema 2');
+    expect(parsed.network[0]!.origin).toBe('https://xn--bcher-kva.example');
+  });
+
   it('keeps schema 1 behavior exact', () => {
     const parsed = parsePluginManifest(JSON.stringify({
       ...manifest(),
