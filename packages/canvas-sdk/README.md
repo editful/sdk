@@ -127,21 +127,26 @@ lease. `pack(source, state, services, out)` emits the retained surface from
 that source node.
 
 A background can also limit the canvas camera while it is active. `camera`
-reads the same source node and state as `pack`, and `minZoom` is in canvas
-zoom units, CSS pixels per canvas unit. A map drawn at map zoom
+reads the same source node and state as `pack`, and `minZoom` and `maxZoom`
+are in canvas zoom units, CSS pixels per canvas unit. A map drawn at map zoom
 `baseZoom + log2(canvasZoom)` shows the whole world, map zoom 0, at canvas
-zoom `2 ** -baseZoom`:
+zoom `2 ** -baseZoom`, and map zoom 22 at `2 ** (22 - baseZoom)`:
 
 ```ts
 context.backgroundSurface<'acme:map', { readonly sourceMapId: string }>({
   // id, label, stateSchema, sourceKind, sourceNodeId, pack...
-  camera: (source) => ({ minZoom: 2 ** -source.get(baseZoom) }),
+  camera: (source) => ({
+    minZoom: 2 ** -source.get(baseZoom),
+    maxZoom: 2 ** (22 - source.get(baseZoom)),
+  }),
 });
 ```
 
-Editful keeps its own zoom range and uses the higher minimum. When the
-background becomes active, or the limit changes, it zooms a camera that is
-further out back in about the viewport centre.
+Editful uses the higher of its own minimum and `minZoom`. `maxZoom` replaces
+its maximum, so a background can zoom deeper than an ordinary board, up to
+2^20 where rendering stays precise; the minimum never exceeds the maximum.
+When the background becomes active, or a limit changes, Editful zooms a
+camera outside the new range to its nearest end about the viewport centre.
 
 ## Host notification tray
 

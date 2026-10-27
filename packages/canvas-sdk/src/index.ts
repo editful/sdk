@@ -447,14 +447,23 @@ export type PluginBackgroundStatus<State extends PluginJson = PluginJson> =
       readonly label: string;
     };
 
-/** Limits a board background places on the canvas camera while it is active. */
+/**
+ * Limits a board background places on the canvas camera while it is active.
+ * Zooms are canvas zooms, in CSS pixels per canvas unit. Omit a limit, or
+ * return a value that is not a positive finite number, to keep the host's.
+ */
 export interface PluginBackgroundCameraLimits {
   /**
-   * Lowest canvas zoom, in CSS pixels per canvas unit. The host never zooms
-   * out past its own minimum either, so it uses whichever is higher. Omit it,
-   * or return a value that is not a positive finite number, for no limit.
+   * Lowest canvas zoom. The host never zooms out past its own minimum either,
+   * so it uses whichever is higher, and never more than the maximum in effect.
    */
   readonly minZoom?: number;
+  /**
+   * Highest canvas zoom. It replaces the host's maximum, so it can zoom deeper
+   * than ordinary boards, up to a host ceiling where rendering stays precise
+   * (2^20 in Editful 0.16). It never falls below the host's minimum.
+   */
+  readonly maxZoom?: number;
 }
 
 export interface PluginBackgroundSurfaceContribution<

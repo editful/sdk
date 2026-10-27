@@ -119,7 +119,10 @@ describe('board background camera limits', () => {
           camera(node, state) {
             expectTypeOf(node).toEqualTypeOf<PackedNode<'fixture:source'>>();
             expectTypeOf(state).toEqualTypeOf<{ readonly sourceId: string }>();
-            return { minZoom: 2 ** -node.get(baseZoom) };
+            return {
+              minZoom: 2 ** -node.get(baseZoom),
+              maxZoom: 2 ** (22 - node.get(baseZoom)),
+            };
           },
         });
         void background;
@@ -131,6 +134,7 @@ describe('board background camera limits', () => {
     >();
     expectTypeOf<PluginBackgroundCameraLimits>().toEqualTypeOf<{
       readonly minZoom?: number;
+      readonly maxZoom?: number;
     }>();
   });
 });

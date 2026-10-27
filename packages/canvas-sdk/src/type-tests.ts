@@ -73,6 +73,16 @@ definePlugin({
       // @ts-expect-error Camera limits are canvas zoom numbers.
       camera: () => ({ minZoom: 'world' }),
     });
+    context.backgroundSurface<'fixture:alpha'>({
+      id: 'fixture:bad-camera-maximum',
+      label: 'Bad camera maximum',
+      stateSchema: { type: 'object' },
+      sourceKind: 'fixture:alpha',
+      sourceNodeId: () => '1:1',
+      pack: () => undefined,
+      // @ts-expect-error Camera limits are canvas zoom numbers.
+      camera: () => ({ maxZoom: 'street' }),
+    });
 
     context.action({
       id: 'fixture:bad-schema',
