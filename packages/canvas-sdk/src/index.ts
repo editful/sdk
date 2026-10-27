@@ -991,6 +991,19 @@ export interface PluginEditorInstance {
   dispose(): void;
 }
 
+/** Host chrome around a mounted editor that the editor may fill. */
+export interface PluginEditorChrome {
+  /**
+   * An empty element at the end of a sidebar editor's title row, beside the
+   * editor's label, for compact controls such as an add button. The row is
+   * short, so size controls to the label and give them negative margins if
+   * they need a larger hit area. Absent for toolbar editors and in Editful
+   * before 0.15; place such controls in the editor's own container then.
+   * Editful empties it when the editor unmounts.
+   */
+  readonly titleActions?: HTMLElement;
+}
+
 export interface PluginEditorContribution {
   readonly id: string;
   readonly label: string;
@@ -1022,10 +1035,12 @@ export interface PluginEditorContribution {
   /**
    * Mounts trusted plugin UI directly into Editful's renderer. Plugins may use
    * plain DOM or mount a bundled React root and must release owned resources.
+   * `chrome` exposes host chrome the editor may fill, such as its title row.
    */
   mount(
     container: HTMLElement,
     context: PluginActionContext,
+    chrome?: PluginEditorChrome,
   ): void | (() => void) | PluginEditorInstance;
 }
 
