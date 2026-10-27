@@ -6,6 +6,7 @@ import {
   encodeLineMarkers,
   hexColor,
   type PluginBackgroundStatus,
+  type PluginEditorChrome,
 } from './index.js';
 
 describe('hexColor', () => {
@@ -69,6 +70,18 @@ describe('board background authoring contract', () => {
           activation: 'manual',
           background,
           mount: () => undefined,
+        });
+        context.editor({
+          id: 'fixture:layers',
+          label: 'Layers',
+          surface: 'left-sidebar',
+          mount(container, _action, chrome) {
+            expectTypeOf(chrome).toEqualTypeOf<PluginEditorChrome | undefined>();
+            expectTypeOf(chrome?.titleActions).toEqualTypeOf<HTMLElement | undefined>();
+            const add = document.createElement('button');
+            (chrome?.titleActions ?? container).append(add);
+            return { dispose: () => add.remove() };
+          },
         });
         context.migration({
           id: 'fixture:background-v1',
