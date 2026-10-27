@@ -112,6 +112,7 @@ function buildOptions(args: Arguments): PluginBuildOptions {
 }
 
 function report(result: PluginBuildResult, verb = 'Built'): void {
+  for (const warning of result.warnings) console.warn(`Warning: ${warning}`);
   const destination = verb === 'Validated' ? '' : ` → ${result.artifactDirectory}`;
   console.log(
     `${verb} ${result.manifest.id}@${result.manifest.version}${destination} (${formatBytes(result.bundleBytes)} / ${formatBytes(result.maximumBundleBytes)})`,

@@ -1,5 +1,7 @@
 import {
   MAX_PLUGIN_MANIFEST_BYTES,
+  MAX_PLUGIN_NETWORK_ORIGINS,
+  MAX_PLUGIN_SCRIPT_ORIGINS,
   PLUGIN_CAPABILITIES,
   PLUGIN_ENTRY_FILE,
   type PluginCompatibilityContext,
@@ -10,8 +12,10 @@ import {
   type PluginNetworkMethod,
   type PluginRemoteMediaDeclaration,
   type PluginRemoteMediaType,
+  type PluginScriptDeclaration,
   type PluginSecretDeclaration,
   type PluginSettingDeclaration,
+  type PluginWebAssemblyDeclaration,
   type PluginWorkerDeclaration,
 } from './types.js';
 import {
@@ -39,14 +43,21 @@ const V2_MANIFEST_KEYS = new Set([
   ...V1_MANIFEST_KEYS,
   'network',
   'remoteMedia',
+  'scripts',
   'settings',
   'secrets',
   'workers',
+  'webAssembly',
 ]);
 
 const ID = /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/;
 const DECLARATION_KEY = /^[a-z][a-z0-9-]*$/;
 const SHA256 = /^[a-f0-9]{64}$/;
+// Lowercase LDH DNS labels (punycode included). Origins are pasted into host
+// content security policies, so nothing else may reach them: WHATWG URL
+// parsing alone admits hosts such as `x;sandbox`, `x,script-src`, or `x"y`.
+const LDH_HOSTNAME =
+  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/u;
 const STABLE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 // SemVer 2.0.0, including optional pre-release and build identifiers.
 const SEMVER =
@@ -258,10 +269,11 @@ function exactHttpsOrigin(
     url.pathname !== '/' ||
     url.search !== '' ||
     url.hash !== '' ||
-    value !== url.origin
+    value !== url.origin ||
+    !LDH_HOSTNAME.test(url.hostname)
   ) {
     malformed(
-      `${key} must be a canonical HTTPS origin without credentials, port, path, query, fragment, or wildcard`,
+      `${key} must be a canonical HTTPS origin with a lowercase DNS hostname and no credentials, port, path, query, fragment, or wildcard`,
       pluginId,
     );
   }
@@ -342,7 +354,7 @@ function parseNetwork(
 ): readonly PluginNetworkDeclaration[] {
   const values = parsed.network === undefined
     ? []
-    : requiredArray(parsed, 'network', 16, pluginId);
+    : requiredArray(parsed, 'network', MAX_PLUGIN_NETWORK_ORIGINS, pluginId);
   return uniqueDeclarations(
     values,
     (entry, index) => {
@@ -408,6 +420,50 @@ function parseRemoteMedia(
     'remoteMedia',
     pluginId,
   );
+}
+
+function parseScripts(
+  parsed: JsonObject,
+  pluginId: string,
+): readonly PluginScriptDeclaration[] {
+  const values = parsed.scripts === undefined
+    ? []
+    : requiredArray(parsed, 'scripts', MAX_PLUGIN_SCRIPT_ORIGINS, pluginId);
+  return uniqueDeclarations(
+    values,
+    (entry, index) => {
+      if (!isObject(entry)) malformed(`scripts[${index}] must be an object`, pluginId);
+      return exactHttpsOrigin(entry.origin, `scripts[${index}].origin`, pluginId);
+    },
+    (entry, index) => {
+      if (!isObject(entry)) malformed(`scripts[${index}] must be an object`, pluginId);
+      assertExactKeys(
+        entry,
+        new Set(['origin', 'purpose']),
+        `scripts[${index}]`,
+        pluginId,
+      );
+      return Object.freeze({
+        origin: exactHttpsOrigin(entry.origin, `scripts[${index}].origin`, pluginId),
+        purpose: requiredString(entry, 'purpose', 240, pluginId),
+      });
+    },
+    'scripts',
+    pluginId,
+  );
+}
+
+function parseWebAssembly(
+  parsed: JsonObject,
+  pluginId: string,
+): PluginWebAssemblyDeclaration | null {
+  const value = parsed.webAssembly;
+  if (value === undefined) return null;
+  if (!isObject(value)) malformed('webAssembly must be an object', pluginId);
+  assertExactKeys(value, new Set(['purpose']), 'webAssembly', pluginId);
+  return Object.freeze({
+    purpose: requiredString(value, 'purpose', 240, pluginId),
+  });
 }
 
 function parseSettings(
@@ -783,6 +839,8 @@ export function parsePluginManifest(
   );
   const network = parseNetwork(parsed, id);
   const remoteMedia = parseRemoteMedia(parsed, id);
+  const scripts = parseScripts(parsed, id);
+  const webAssembly = parseWebAssembly(parsed, id);
   const settings = parseSettings(parsed, id);
   const secrets = parseSecrets(parsed, id);
   const workers = parseWorkers(parsed, id);
@@ -790,6 +848,7 @@ export function parsePluginManifest(
   const declarationRequirements = [
     ['network', network.length],
     ['remote-media', remoteMedia.length],
+    ['external-scripts', scripts.length],
     ['configuration', settings.length],
     ['secrets', secrets.length],
   ] as const;
@@ -801,6 +860,20 @@ export function parsePluginManifest(
       );
     }
   }
+  if (webAssembly !== null && !capabilitySet.has('external-scripts')) {
+    malformed('webAssembly requires the "external-scripts" capability', id);
+  }
+  // Fetching from an origin never implies running its code, and running its
+  // code must not silently grant connections either: both are declared.
+  const networkOrigins = new Set(network.map(({ origin }) => origin));
+  scripts.forEach(({ origin }, index) => {
+    if (!networkOrigins.has(origin)) {
+      malformed(
+        `scripts[${index}].origin ${JSON.stringify(origin)} must also be declared in network`,
+        id,
+      );
+    }
+  });
   const declaredSecretNames = new Set(secrets.map(({ name }) => name));
   for (const setting of settings) {
     if (
@@ -820,6 +893,8 @@ export function parsePluginManifest(
     capabilities,
     network,
     remoteMedia,
+    scripts,
+    webAssembly,
     settings,
     secrets,
     workers,

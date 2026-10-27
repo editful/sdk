@@ -58,8 +58,8 @@ pnpm --dir examples/react-plugin dev --root "$HOME/Documents/Editful Plugins"
 
 The tool creates `example-react-counter/` as a direct child of the selected
 folder. The production app watches that folder and reloads validated plugin
-builds automatically. A change that expands remote-media policy may require the
-app reload offered by Editful.
+builds automatically. A change that expands remote-media policy or adds
+external script origins may require the app reload offered by Editful.
 
 `--root` must be the exact folder selected in Editful, not the plugin project
 directory. See the [plugin tools documentation](packages/plugin-tools/README.md)

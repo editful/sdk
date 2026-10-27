@@ -15,6 +15,8 @@ export const MAX_PLUGIN_ICON_TOTAL_BYTES = 256 * 1024;
 export const MAX_PLUGIN_WORKER_BYTES = 4 * 1024 * 1024;
 export const MAX_PLUGIN_WORKER_COUNT = 4;
 export const MAX_PLUGIN_WORKER_TOTAL_BYTES = 12 * 1024 * 1024;
+export const MAX_PLUGIN_SCRIPT_ORIGINS = 4;
+export const MAX_PLUGIN_NETWORK_ORIGINS = 24;
 
 export const PLUGIN_CAPABILITIES = Object.freeze([
   'node-kinds',
@@ -28,6 +30,7 @@ export const PLUGIN_CAPABILITIES = Object.freeze([
   'interaction-regions',
   'agent-actions',
   'gpu-renderer',
+  'external-scripts',
 ] as const);
 
 export type PluginCapability = (typeof PLUGIN_CAPABILITIES)[number];
@@ -54,6 +57,27 @@ export type PluginRemoteMediaType =
 export interface PluginRemoteMediaDeclaration {
   readonly origin: string;
   readonly mediaTypes: readonly PluginRemoteMediaType[];
+  readonly purpose: string;
+}
+
+/**
+ * An exact HTTPS origin whose scripts the host may run in its renderer.
+ *
+ * Requires the `external-scripts` capability, and the origin must also be
+ * declared in `network`: running an origin's code and connecting to it are
+ * separate grants, and neither implies the other.
+ */
+export interface PluginScriptDeclaration {
+  readonly origin: string;
+  readonly purpose: string;
+}
+
+/**
+ * Asks the host to let scripts compile WebAssembly (CSP `'wasm-unsafe-eval'`),
+ * for external libraries such as Google's Maps JavaScript API that compile
+ * modules at runtime. Requires the `external-scripts` capability.
+ */
+export interface PluginWebAssemblyDeclaration {
   readonly purpose: string;
 }
 
@@ -123,6 +147,10 @@ export interface PluginManifestV2 extends PluginManifestBase {
   readonly capabilities: readonly PluginCapability[];
   readonly network: readonly PluginNetworkDeclaration[];
   readonly remoteMedia: readonly PluginRemoteMediaDeclaration[];
+  /** Empty unless the manifest declares `scripts`. */
+  readonly scripts: readonly PluginScriptDeclaration[];
+  /** `null` unless the manifest declares `webAssembly`. */
+  readonly webAssembly: PluginWebAssemblyDeclaration | null;
   readonly settings: readonly PluginSettingDeclaration[];
   readonly secrets: readonly PluginSecretDeclaration[];
   readonly workers: readonly PluginWorkerDeclaration[];
