@@ -281,6 +281,84 @@ describe('plugin tools build', () => {
       ]);
     });
 
+    it('treats orders computed from Editful-only values as unknown, not invalid', async () => {
+      const directory = await project(`
+        export default {
+          register(context) {
+            const preferred = context.settings.get('order') ?? 5;
+            context.command({ id: 'fixture:stand-in', label: 'Stand-in', toolbar: { order: preferred }, async run() {} });
+            context.command({ id: 'fixture:derived', label: 'Derived', toolbar: { order: context.layout.order + 1 }, async run() {} });
+          },
+        };
+      `, { capabilities: ['commands'] });
+      const result = await checkPlugin({ projectDirectory: directory });
+      expect(result.warnings).toEqual([
+        expect.stringMatching(/Could not check toolbar\.order for "fixture:stand-in", "fixture:derived"/u),
+      ]);
+    });
+
+    it('ends loops driven by Editful-only values quickly', async () => {
+      const directory = await project(`
+        export default {
+          register(context) {
+            while (context.document.hasMore()) context.document.next();
+          },
+        };
+      `, { capabilities: ['commands'] });
+      const started = performance.now();
+      const result = await checkPlugin({ projectDirectory: directory });
+      expect(performance.now() - started).toBeLessThan(4_000);
+      expect(result.warnings).toEqual([
+        expect.stringMatching(/Skipped command contribution checks.*exist only inside Editful/u),
+      ]);
+    });
+
+    it('registers the bundle without environment, files, network, or processes', async () => {
+      process.env.EDITFUL_PLUGIN_TOOLS_TEST_SECRET = 'leaked';
+      try {
+        const directory = await project(`
+          export default {
+            async register(context) {
+              const probe = {};
+              const attempt = async (name, action) => {
+                try {
+                  await action();
+                  probe[name] = 'allowed';
+                } catch (error) {
+                  probe[name] = error.code ?? error.cause?.code ?? error.name;
+                }
+              };
+              const fs = process.getBuiltinModule('node:fs');
+              await attempt('read', () => fs.readFileSync(${JSON.stringify(join(packageDirectory, 'package.json'))}));
+              await attempt('write', () => fs.writeFileSync('probe.txt', 'x'));
+              await attempt('child', () => process.getBuiltinModule('node:child_process').execFileSync('true'));
+              await attempt('worker', () => new (process.getBuiltinModule('node:worker_threads').Worker)('1', { eval: true }));
+              await attempt('fetch', () => fetch('http://127.0.0.1:65535/'));
+              probe.secret = process.env.EDITFUL_PLUGIN_TOOLS_TEST_SECRET ?? 'absent';
+              context.command({ id: JSON.stringify(probe), label: 'Probe', toolbar: { order: 5000 }, async run() {} });
+            },
+          };
+        `, { capabilities: ['commands'] });
+        const failure = await checkPlugin({ projectDirectory: directory }).then(
+          () => { throw new Error('expected the probe order to fail'); },
+          (error: unknown) => (error as Error).message,
+        );
+        const probe = JSON.parse(
+          JSON.parse(/^Command ("(?:[^"\\]|\\.)*")/u.exec(failure)![1]!) as string,
+        ) as Record<string, string>;
+        expect(probe).toEqual({
+          read: 'ERR_ACCESS_DENIED',
+          write: 'ERR_ACCESS_DENIED',
+          child: 'ERR_ACCESS_DENIED',
+          worker: 'ERR_ACCESS_DENIED',
+          fetch: 'ERR_ACCESS_DENIED',
+          secret: 'absent',
+        });
+      } finally {
+        delete process.env.EDITFUL_PLUGIN_TOOLS_TEST_SECRET;
+      }
+    });
+
     it('does not wait for timers the bundle leaves running', async () => {
       const directory = await project(`
         setInterval(() => undefined, 1_000);

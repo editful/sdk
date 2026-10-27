@@ -72,10 +72,22 @@ Validation covers the artifact and manifest, and for plugins with the
 `commands` capability also the commands they register: each command's
 `toolbar.order` must be an integer from -1000 to 1000, which Editful requires
 before it loads a plugin. To see registered commands, the tool imports the
-built `plugin.mjs` in a disposable Node worker and calls `register` with a
-recording context whose other methods do nothing. When the bundle cannot
-register outside a browser, for example because `register` touches `document`,
-the command checks are skipped with a warning rather than failing the build. `dev` watches the project and emits an inline source
+built `plugin.mjs` and calls `register` with a recording context whose other
+members are stand-ins for values that exist only inside Editful.
+
+That evaluation runs in a separate Node process with an empty environment and
+Node's permission model: it may read only the built `plugin.mjs`, and writing
+files, network access, child processes, worker threads, native addons, WASI,
+and the inspector are denied. It gets a 128 MiB heap and is killed after it
+reports or after 5 seconds. The process still runs as your user, so it can,
+for example, signal other processes; evaluate only plugins whose source you
+would build anyway.
+
+The check never fails the build on something it cannot judge. When the bundle
+cannot register outside a browser, for example because `register` touches
+`document`, or it keeps using stand-ins as in a loop, the command checks are
+skipped with a warning. An order that is or was computed from a stand-in, such
+as `context.settings.get('order') ?? 5`, is reported as a warning too. `dev` watches the project and emits an inline source
 map. `pack` additionally creates a deterministic
 `acme-status-card-1.0.0.editful-plugin` ZIP.
 
