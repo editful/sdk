@@ -26,6 +26,7 @@ import {
 } from '@editful/plugin-artifact';
 import { rolldown, type OutputAsset, type OutputChunk } from 'rolldown';
 import { createPluginArchive } from './archive.js';
+import { checkPluginContributions } from './contributions.js';
 import {
   loadPluginConfig,
   type ResolvedEditfulPluginConfig,
@@ -44,6 +45,8 @@ export interface PluginBuildResult {
   readonly manifest: PluginManifest;
   readonly bundleBytes: number;
   readonly maximumBundleBytes: number;
+  /** Non-fatal notes, such as checks that could not run outside Editful. */
+  readonly warnings: readonly string[];
 }
 
 export interface PluginPackResult extends PluginBuildResult {
@@ -164,11 +167,20 @@ async function buildInto(
     minSdkVersion: config.sdkVersion,
     maxSdkVersion: config.sdkVersion,
   });
+  // Editful validates registered contributions only when it loads a plugin,
+  // so catch the ones it would refuse before they ship.
+  const contributions = (validated.manifest.capabilities as readonly string[]).includes('commands')
+    ? await checkPluginContributions(join(directory, 'plugin.mjs'), config.id)
+    : { errors: [], warnings: [] };
+  if (contributions.errors.length > 0) {
+    throw new Error(contributions.errors.join('\n'));
+  }
   return Object.freeze({
     artifactDirectory: directory,
     manifest: validated.manifest,
     bundleBytes,
     maximumBundleBytes: MAX_PLUGIN_BUNDLE_BYTES,
+    warnings: Object.freeze([...contributions.warnings]),
   });
 }
 

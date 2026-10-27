@@ -213,6 +213,84 @@ describe('plugin tools build', () => {
     );
   });
 
+  describe('command toolbar order', () => {
+    function commands(orders: readonly unknown[]): string {
+      return `
+        import { definePlugin } from '@editful/canvas-sdk';
+        const TOOLS = ${JSON.stringify(orders.map((order, index) => ({ id: `fixture:tool-${index}`, order })))};
+        export default definePlugin({
+          register(context) {
+            context.kind('fixture:card').field.number('size');
+            context.editor({ id: 'fixture:panel', label: 'Panel', surface: 'right-sidebar', mount() {} });
+            context.command({ id: 'fixture:palette-only', label: 'Palette only', async run() {} });
+            for (const tool of TOOLS) {
+              context.command({
+                id: tool.id,
+                label: tool.id,
+                toolbar: { order: tool.order === 'NaN' ? Number.NaN : tool.order },
+                async run() {},
+              });
+            }
+          },
+        });
+      `;
+    }
+
+    it('accepts orders from -1000 to 1000', async () => {
+      const directory = await project(commands([-1_000, 0, 1_000]), {
+        capabilities: ['commands'],
+      });
+      const result = await checkPlugin({ projectDirectory: directory });
+      expect(result.warnings).toEqual([]);
+    });
+
+    it.each([
+      [1_001, /"fixture:tool-0" has toolbar\.order 1001; Editful accepts only integers from -1000 to 1000/u],
+      [-1_001, /toolbar\.order -1001/u],
+      [1.5, /toolbar\.order 1\.5/u],
+      ['NaN', /toolbar\.order NaN/u],
+      ['900', /toolbar\.order string/u],
+    ])('rejects order %s', async (order, message) => {
+      const directory = await project(commands([order]), {
+        capabilities: ['commands'],
+      });
+      await expect(checkPlugin({ projectDirectory: directory })).rejects.toThrow(message);
+    });
+
+    it('reports every refused command at once', async () => {
+      const directory = await project(commands([1_002, 1_003]), {
+        capabilities: ['commands'],
+      });
+      await expect(checkPlugin({ projectDirectory: directory })).rejects.toThrow(
+        /fixture:tool-0[^\n]*1002[^\n]*\n[^\n]*fixture:tool-1[^\n]*1003/u,
+      );
+    });
+
+    it('warns instead of failing when register needs a browser', async () => {
+      const directory = await project(`
+        export default {
+          register(context) {
+            document.body.append('needs a browser');
+            context.command({ id: 'fixture:late', label: 'Late', toolbar: { order: 5_000 }, async run() {} });
+          },
+        };
+      `, { capabilities: ['commands'] });
+      const result = await checkPlugin({ projectDirectory: directory });
+      expect(result.warnings).toEqual([
+        expect.stringMatching(/Skipped command contribution checks.*ReferenceError: document is not defined/u),
+      ]);
+    });
+
+    it('does not wait for timers the bundle leaves running', async () => {
+      const directory = await project(`
+        setInterval(() => undefined, 1_000);
+        export default { register() {} };
+      `, { capabilities: ['commands'] });
+      const result = await checkPlugin({ projectDirectory: directory });
+      expect(result.warnings).toEqual([]);
+    });
+  });
+
   it('rejects unsafe plugin ids and filesystem-root output', async () => {
     const unsafe = await project('export default { register() {} };', {
       id: '../../escape',

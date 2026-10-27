@@ -66,7 +66,16 @@ editful-plugin pack
 
 `build` publishes `dist/acme-status-card/{plugin.json,plugin.mjs,...}` through
 an atomic directory swap. `check` performs the same bundle and validation
-without touching `dist`. `dev` watches the project and emits an inline source
+without touching `dist`.
+
+Validation covers the artifact and manifest, and for plugins with the
+`commands` capability also the commands they register: each command's
+`toolbar.order` must be an integer from -1000 to 1000, which Editful requires
+before it loads a plugin. To see registered commands, the tool imports the
+built `plugin.mjs` in a disposable Node worker and calls `register` with a
+recording context whose other methods do nothing. When the bundle cannot
+register outside a browser, for example because `register` touches `document`,
+the command checks are skipped with a warning rather than failing the build. `dev` watches the project and emits an inline source
 map. `pack` additionally creates a deterministic
 `acme-status-card-1.0.0.editful-plugin` ZIP.
 
