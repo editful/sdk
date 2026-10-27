@@ -447,6 +447,16 @@ export type PluginBackgroundStatus<State extends PluginJson = PluginJson> =
       readonly label: string;
     };
 
+/** Limits a board background places on the canvas camera while it is active. */
+export interface PluginBackgroundCameraLimits {
+  /**
+   * Lowest canvas zoom, in CSS pixels per canvas unit. The host never zooms
+   * out past its own minimum either, so it uses whichever is higher. Omit it,
+   * or return a value that is not a positive finite number, for no limit.
+   */
+  readonly minZoom?: number;
+}
+
 export interface PluginBackgroundSurfaceContribution<
   Kind = unknown,
   State extends PluginJson = PluginJson,
@@ -462,6 +472,13 @@ export interface PluginBackgroundSurfaceContribution<
     services: PackServices,
     out: PrimitiveWriter,
   ): void;
+  /**
+   * Limits the canvas camera while this background is active, read from the
+   * same source node and state as `pack`. The host asks again whenever the
+   * document changes and moves a camera that is outside the new limits, so
+   * keep it cheap and pure. Editful before 0.16 ignores it.
+   */
+  camera?(source: PackedNode<Kind>, state: State): PluginBackgroundCameraLimits;
 }
 
 export interface CreateContribution {
@@ -1063,7 +1080,7 @@ export interface KindBuilder<Kind = unknown> {
   pack(fn: PackFunction<Kind>): void;
 }
 
-/** Read-only node view valid only for the duration of one pack call. */
+/** Read-only node view valid only for the duration of one pack or camera call. */
 export interface PackedNode<Kind = unknown> {
   readonly x: number;
   readonly y: number;

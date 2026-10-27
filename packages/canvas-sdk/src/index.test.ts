@@ -5,8 +5,12 @@ import {
   definePlugin,
   encodeLineMarkers,
   hexColor,
+  type PackedNode,
+  type PluginBackgroundCameraLimits,
   type PluginBackgroundStatus,
+  type PluginBackgroundSurfaceContribution,
   type PluginEditorChrome,
+  type PluginJson,
 } from './index.js';
 
 describe('hexColor', () => {
@@ -89,6 +93,45 @@ describe('board background authoring contract', () => {
         });
       },
     });
+  });
+});
+
+describe('board background camera limits', () => {
+  it('reads limits from the typed source node and state', () => {
+    definePlugin({
+      register(context) {
+        const source = context.kind('fixture:source');
+        const baseZoom = source.field.f64('base-zoom', { default: 8 });
+        const background = context.backgroundSurface<'fixture:source', {
+          readonly sourceId: string;
+        }>({
+          id: 'fixture:background',
+          label: 'Fixture',
+          stateSchema: {
+            type: 'object',
+            properties: { sourceId: { type: 'string' } },
+            required: ['sourceId'],
+            additionalProperties: false,
+          },
+          sourceKind: 'fixture:source',
+          sourceNodeId: (state) => state.sourceId,
+          pack: () => undefined,
+          camera(node, state) {
+            expectTypeOf(node).toEqualTypeOf<PackedNode<'fixture:source'>>();
+            expectTypeOf(state).toEqualTypeOf<{ readonly sourceId: string }>();
+            return { minZoom: 2 ** -node.get(baseZoom) };
+          },
+        });
+        void background;
+      },
+    });
+    expectTypeOf<PluginBackgroundSurfaceContribution['camera']>().toEqualTypeOf<
+      | ((source: PackedNode, state: PluginJson) => PluginBackgroundCameraLimits)
+      | undefined
+    >();
+    expectTypeOf<PluginBackgroundCameraLimits>().toEqualTypeOf<{
+      readonly minZoom?: number;
+    }>();
   });
 });
 

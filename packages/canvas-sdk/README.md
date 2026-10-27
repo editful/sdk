@@ -119,6 +119,30 @@ store, mutable registry, numeric kind/field index, renderer internals, raw IPC,
 Node, filesystem, shell, or subprocess API. Field handles are branded to their
 declaring kind and candidate registry.
 
+## Board backgrounds
+
+`context.backgroundSurface(...)` lets one node of a declared `sourceKind` fill
+the board behind ordinary content while a plugin holds the board's background
+lease. `pack(source, state, services, out)` emits the retained surface from
+that source node.
+
+A background can also limit the canvas camera while it is active. `camera`
+reads the same source node and state as `pack`, and `minZoom` is in canvas
+zoom units, CSS pixels per canvas unit. A map drawn at map zoom
+`baseZoom + log2(canvasZoom)` shows the whole world, map zoom 0, at canvas
+zoom `2 ** -baseZoom`:
+
+```ts
+context.backgroundSurface<'acme:map', { readonly sourceMapId: string }>({
+  // id, label, stateSchema, sourceKind, sourceNodeId, pack...
+  camera: (source) => ({ minZoom: 2 ** -source.get(baseZoom) }),
+});
+```
+
+Editful keeps its own zoom range and uses the higher minimum. When the
+background becomes active, or the limit changes, it zooms a camera that is
+further out back in about the viewport centre.
+
 ## Host notification tray
 
 Commands, interactions, importers, and editor callbacks can publish bounded

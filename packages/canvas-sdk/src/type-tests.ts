@@ -50,6 +50,30 @@ definePlugin({
       },
     });
 
+    context.backgroundSurface<'fixture:alpha'>({
+      id: 'fixture:bad-camera',
+      label: 'Bad camera',
+      stateSchema: { type: 'object' },
+      sourceKind: 'fixture:alpha',
+      sourceNodeId: () => '1:1',
+      pack: () => undefined,
+      camera(node) {
+        // @ts-expect-error Camera limits read the source kind's own fields.
+        node.get(betaLevel);
+        return { minZoom: node.get(alphaLevel) };
+      },
+    });
+    context.backgroundSurface<'fixture:alpha'>({
+      id: 'fixture:bad-camera-limit',
+      label: 'Bad camera limit',
+      stateSchema: { type: 'object' },
+      sourceKind: 'fixture:alpha',
+      sourceNodeId: () => '1:1',
+      pack: () => undefined,
+      // @ts-expect-error Camera limits are canvas zoom numbers.
+      camera: () => ({ minZoom: 'world' }),
+    });
+
     context.action({
       id: 'fixture:bad-schema',
       name: 'bad_schema',
