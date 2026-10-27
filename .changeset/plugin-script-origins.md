@@ -11,3 +11,7 @@ also declared in `network`. `definePluginConfig` accepts `scripts`, and builds
 omit the field when it is empty so other plugins stay loadable by older
 Editful releases.
 
+
+Plugins that run such a library and need it to compile WebAssembly declare
+`webAssembly: { purpose }`, which also requires `external-scripts`; script
+origins never imply it. Plugins may now declare up to 24 network origins.

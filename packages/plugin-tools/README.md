@@ -48,6 +48,8 @@ export default definePluginConfig({
     origin: 'https://maps.googleapis.com',
     purpose: "Run Google's Maps JavaScript API in map editors.",
   }],
+  // Only for libraries that compile WebAssembly at runtime.
+  webAssembly: { purpose: 'Compile Google Maps label placement.' },
 });
 ```
 

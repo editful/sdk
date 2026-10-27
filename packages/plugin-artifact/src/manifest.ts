@@ -1,5 +1,6 @@
 import {
   MAX_PLUGIN_MANIFEST_BYTES,
+  MAX_PLUGIN_NETWORK_ORIGINS,
   MAX_PLUGIN_SCRIPT_ORIGINS,
   PLUGIN_CAPABILITIES,
   PLUGIN_ENTRY_FILE,
@@ -14,6 +15,7 @@ import {
   type PluginScriptDeclaration,
   type PluginSecretDeclaration,
   type PluginSettingDeclaration,
+  type PluginWebAssemblyDeclaration,
   type PluginWorkerDeclaration,
 } from './types.js';
 import {
@@ -45,6 +47,7 @@ const V2_MANIFEST_KEYS = new Set([
   'settings',
   'secrets',
   'workers',
+  'webAssembly',
 ]);
 
 const ID = /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/;
@@ -351,7 +354,7 @@ function parseNetwork(
 ): readonly PluginNetworkDeclaration[] {
   const values = parsed.network === undefined
     ? []
-    : requiredArray(parsed, 'network', 16, pluginId);
+    : requiredArray(parsed, 'network', MAX_PLUGIN_NETWORK_ORIGINS, pluginId);
   return uniqueDeclarations(
     values,
     (entry, index) => {
@@ -448,6 +451,19 @@ function parseScripts(
     'scripts',
     pluginId,
   );
+}
+
+function parseWebAssembly(
+  parsed: JsonObject,
+  pluginId: string,
+): PluginWebAssemblyDeclaration | null {
+  const value = parsed.webAssembly;
+  if (value === undefined) return null;
+  if (!isObject(value)) malformed('webAssembly must be an object', pluginId);
+  assertExactKeys(value, new Set(['purpose']), 'webAssembly', pluginId);
+  return Object.freeze({
+    purpose: requiredString(value, 'purpose', 240, pluginId),
+  });
 }
 
 function parseSettings(
@@ -824,6 +840,7 @@ export function parsePluginManifest(
   const network = parseNetwork(parsed, id);
   const remoteMedia = parseRemoteMedia(parsed, id);
   const scripts = parseScripts(parsed, id);
+  const webAssembly = parseWebAssembly(parsed, id);
   const settings = parseSettings(parsed, id);
   const secrets = parseSecrets(parsed, id);
   const workers = parseWorkers(parsed, id);
@@ -842,6 +859,9 @@ export function parsePluginManifest(
         id,
       );
     }
+  }
+  if (webAssembly !== null && !capabilitySet.has('external-scripts')) {
+    malformed('webAssembly requires the "external-scripts" capability', id);
   }
   // Fetching from an origin never implies running its code, and running its
   // code must not silently grant connections either: both are declared.
@@ -874,6 +894,7 @@ export function parsePluginManifest(
     network,
     remoteMedia,
     scripts,
+    webAssembly,
     settings,
     secrets,
     workers,

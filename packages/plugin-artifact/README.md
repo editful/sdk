@@ -57,8 +57,11 @@ Schema 2 adds explicit capability declarations for `commands`, `importers`,
 origins whose hostname is lowercase DNS letters, digits, hyphens, and dots
 (punycode for international names)—wildcards, credentials, ports, paths,
 queries, fragments, and any other host characters are rejected, because hosts
-copy these origins into content security policies. Settings use bounded scalar defaults and secret settings contain only
-named references, never secret values.
+copy these origins into content security policies. A plugin may declare up to
+24 network origins and 16 remote-media origins; hosts built on earlier
+releases of this package accept at most 16 network origins. Settings use
+bounded scalar defaults and secret settings contain only named references,
+never secret values.
 
 ### External scripts
 
@@ -90,9 +93,14 @@ declares each origin in `scripts` and adds the `external-scripts` capability:
 - Every script origin must also appear in `network`. Being allowed to fetch an
   origin never implies running its code, and running an origin's code never
   silently grants connections to it; both are declared.
-- `scripts` is omitted when a plugin declares none. Editful releases that
-  predate script origins reject manifests containing `scripts` or
-  `external-scripts`, so set `minAppVersion` to a release that supports them.
+- Libraries that compile WebAssembly at runtime, such as the Maps JavaScript
+  API's label placement, also need `"webAssembly": { "purpose": "..." }`. It
+  requires `external-scripts` and asks the host to let scripts compile
+  WebAssembly (CSP `'wasm-unsafe-eval'`). Script origins never imply it.
+- `scripts` and `webAssembly` are omitted when a plugin declares none. Editful releases that
+  predate script origins reject manifests containing `scripts`, `webAssembly`,
+  or `external-scripts`, so set `minAppVersion` to a release that supports
+  them.
 
 Hosts decide how to honor a declaration. Editful adds the origins of enabled
 plugins to its renderer's content security policy when it starts, so a newly

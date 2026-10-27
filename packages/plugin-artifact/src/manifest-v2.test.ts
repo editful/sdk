@@ -341,6 +341,42 @@ describe('plugin manifest schema 2', () => {
       expect(parsed.scripts).toEqual([]);
     });
 
+    it('declares WebAssembly compilation only explicitly', () => {
+      const without = parseScripts([{ origin: 'https://scripts.example.com', purpose: 'Run code' }]);
+      if (without.schemaVersion !== 2) throw new Error('expected schema 2');
+      expect(without.webAssembly).toBeNull();
+
+      const parsed = parseScripts(
+        [{ origin: 'https://scripts.example.com', purpose: 'Run code' }],
+        { webAssembly: { purpose: 'Compile map label placement' } },
+      );
+      if (parsed.schemaVersion !== 2) throw new Error('expected schema 2');
+      expect(parsed.webAssembly).toEqual({ purpose: 'Compile map label placement' });
+      expect(Object.isFrozen(parsed.webAssembly)).toBe(true);
+    });
+
+    it.each([
+      [
+        'without the external-scripts capability',
+        { capabilities: manifest().capabilities, scripts: undefined, webAssembly: { purpose: 'Compile' } },
+        /webAssembly requires the "external-scripts" capability/,
+      ],
+      ['as a boolean', { webAssembly: true }, /webAssembly must be an object/],
+      ['without a purpose', { webAssembly: {} }, /purpose must be a non-empty string/],
+      [
+        'with an overlong purpose',
+        { webAssembly: { purpose: 'x'.repeat(241) } },
+        /purpose exceeds its 240-character limit/,
+      ],
+      [
+        'with an unknown key',
+        { webAssembly: { purpose: 'Compile', unsafeEval: true } },
+        /webAssembly contains unsupported key "unsafeEval"/,
+      ],
+    ])('rejects webAssembly %s', (_label, overrides, message) => {
+      expect(() => parseScripts([], overrides)).toThrow(message);
+    });
+
     it('is unavailable to schema 1 manifests', () => {
       expect(() => parsePluginManifest(JSON.stringify({
         ...manifest(),
@@ -392,6 +428,21 @@ describe('plugin manifest schema 2', () => {
     });
     if (parsed.schemaVersion !== 2) throw new Error('expected schema 2');
     expect(parsed.network[0]!.origin).toBe('https://xn--bcher-kva.example');
+  });
+
+  it('accepts up to 24 network origins', () => {
+    const network = (count: number) =>
+      Array.from({ length: count }, (_value, index) => ({
+        origin: `https://host-${index}.example.com`,
+        methods: ['GET'],
+        purpose: 'Data',
+      }));
+    const parsed = parse({ network: network(24) });
+    if (parsed.schemaVersion !== 2) throw new Error('expected schema 2');
+    expect(parsed.network).toHaveLength(24);
+    expect(() => parse({ network: network(25) })).toThrow(
+      /network exceeds its 24-item limit/,
+    );
   });
 
   it('keeps schema 1 behavior exact', () => {

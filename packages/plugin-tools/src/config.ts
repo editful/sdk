@@ -10,6 +10,7 @@ import {
   type PluginScriptDeclaration,
   type PluginSecretDeclaration,
   type PluginSettingDeclaration,
+  type PluginWebAssemblyDeclaration,
 } from '@editful/plugin-artifact';
 
 const CONFIG_FILES = Object.freeze([
@@ -33,6 +34,7 @@ const CONFIG_KEYS = new Set([
   'network',
   'remoteMedia',
   'scripts',
+  'webAssembly',
   'settings',
   'secrets',
   'author',
@@ -76,6 +78,11 @@ export interface EditfulPluginConfig {
    * `external-scripts` capability, and each origin must also be in `network`.
    */
   readonly scripts?: readonly PluginScriptDeclaration[];
+  /**
+   * Lets scripts compile WebAssembly, for external libraries such as Google's
+   * Maps JavaScript API. Requires the `external-scripts` capability.
+   */
+  readonly webAssembly?: PluginWebAssemblyDeclaration;
   readonly settings?: readonly PluginSettingDeclaration[];
   readonly secrets?: readonly PluginSecretDeclaration[];
   readonly author?: string;

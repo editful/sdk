@@ -185,6 +185,17 @@ describe('plugin tools build', () => {
       origin: 'https://maps.example.com',
       purpose: 'Run the vendor map library',
     }]);
+    expect(built.manifest.webAssembly).toBeNull();
+
+    const withWebAssembly = await project('export default { register() {} };', {
+      capabilities: ['editor-ui', 'network', 'external-scripts'],
+      network,
+      scripts: [{ origin: 'https://maps.example.com', purpose: 'Run the vendor map library' }],
+      webAssembly: { purpose: 'Compile map label placement' },
+    });
+    const compiled = await buildPlugin({ projectDirectory: withWebAssembly });
+    if (compiled.manifest.schemaVersion !== 2) throw new Error('expected schema 2');
+    expect(compiled.manifest.webAssembly).toEqual({ purpose: 'Compile map label placement' });
 
     const withoutScripts = await project('export default { register() {} };');
     const result = await buildPlugin({ projectDirectory: withoutScripts });
@@ -192,6 +203,7 @@ describe('plugin tools build', () => {
       await readFile(join(result.artifactDirectory, 'plugin.json'), 'utf8'),
     ) as Record<string, unknown>;
     expect(Object.hasOwn(manifest, 'scripts')).toBe(false);
+    expect(Object.hasOwn(manifest, 'webAssembly')).toBe(false);
   });
 
   it('explains script declarations Editful would refuse', async () => {

@@ -215,6 +215,9 @@ function createManifest(
         ...(config.scripts === undefined || config.scripts.length === 0
           ? {}
           : { scripts: config.scripts }),
+        ...(config.webAssembly === undefined
+          ? {}
+          : { webAssembly: config.webAssembly }),
         settings: config.settings ?? [],
         secrets: config.secrets ?? [],
         workers,
