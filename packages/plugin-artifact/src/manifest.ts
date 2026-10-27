@@ -1,5 +1,6 @@
 import {
   MAX_PLUGIN_MANIFEST_BYTES,
+  MAX_PLUGIN_SCRIPT_ORIGINS,
   PLUGIN_CAPABILITIES,
   PLUGIN_ENTRY_FILE,
   type PluginCompatibilityContext,
@@ -10,6 +11,7 @@ import {
   type PluginNetworkMethod,
   type PluginRemoteMediaDeclaration,
   type PluginRemoteMediaType,
+  type PluginScriptDeclaration,
   type PluginSecretDeclaration,
   type PluginSettingDeclaration,
   type PluginWorkerDeclaration,
@@ -39,6 +41,7 @@ const V2_MANIFEST_KEYS = new Set([
   ...V1_MANIFEST_KEYS,
   'network',
   'remoteMedia',
+  'scripts',
   'settings',
   'secrets',
   'workers',
@@ -406,6 +409,37 @@ function parseRemoteMedia(
       });
     },
     'remoteMedia',
+    pluginId,
+  );
+}
+
+function parseScripts(
+  parsed: JsonObject,
+  pluginId: string,
+): readonly PluginScriptDeclaration[] {
+  const values = parsed.scripts === undefined
+    ? []
+    : requiredArray(parsed, 'scripts', MAX_PLUGIN_SCRIPT_ORIGINS, pluginId);
+  return uniqueDeclarations(
+    values,
+    (entry, index) => {
+      if (!isObject(entry)) malformed(`scripts[${index}] must be an object`, pluginId);
+      return exactHttpsOrigin(entry.origin, `scripts[${index}].origin`, pluginId);
+    },
+    (entry, index) => {
+      if (!isObject(entry)) malformed(`scripts[${index}] must be an object`, pluginId);
+      assertExactKeys(
+        entry,
+        new Set(['origin', 'purpose']),
+        `scripts[${index}]`,
+        pluginId,
+      );
+      return Object.freeze({
+        origin: exactHttpsOrigin(entry.origin, `scripts[${index}].origin`, pluginId),
+        purpose: requiredString(entry, 'purpose', 240, pluginId),
+      });
+    },
+    'scripts',
     pluginId,
   );
 }
@@ -783,6 +817,7 @@ export function parsePluginManifest(
   );
   const network = parseNetwork(parsed, id);
   const remoteMedia = parseRemoteMedia(parsed, id);
+  const scripts = parseScripts(parsed, id);
   const settings = parseSettings(parsed, id);
   const secrets = parseSecrets(parsed, id);
   const workers = parseWorkers(parsed, id);
@@ -790,6 +825,7 @@ export function parsePluginManifest(
   const declarationRequirements = [
     ['network', network.length],
     ['remote-media', remoteMedia.length],
+    ['external-scripts', scripts.length],
     ['configuration', settings.length],
     ['secrets', secrets.length],
   ] as const;
@@ -801,6 +837,17 @@ export function parsePluginManifest(
       );
     }
   }
+  // Fetching from an origin never implies running its code, and running its
+  // code must not silently grant connections either: both are declared.
+  const networkOrigins = new Set(network.map(({ origin }) => origin));
+  scripts.forEach(({ origin }, index) => {
+    if (!networkOrigins.has(origin)) {
+      malformed(
+        `scripts[${index}].origin ${JSON.stringify(origin)} must also be declared in network`,
+        id,
+      );
+    }
+  });
   const declaredSecretNames = new Set(secrets.map(({ name }) => name));
   for (const setting of settings) {
     if (
@@ -820,6 +867,7 @@ export function parsePluginManifest(
     capabilities,
     network,
     remoteMedia,
+    scripts,
     settings,
     secrets,
     workers,

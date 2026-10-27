@@ -52,10 +52,49 @@ compatibility window.
 
 Schema 2 adds explicit capability declarations for `commands`, `importers`,
 `network`, `configuration`, `secrets`, `remote-media`,
-`interaction-regions`, and `agent-actions`. Network and remote-media entries
-use exact HTTPS origins—wildcards, credentials, paths, queries, and fragments
-are rejected. Settings use bounded scalar defaults and secret settings contain
-only named references, never secret values.
+`interaction-regions`, `agent-actions`, `gpu-renderer`, and
+`external-scripts`. Network, remote-media, and script entries use exact HTTPS
+origins—wildcards, credentials, ports, paths, queries, and fragments are
+rejected. Settings use bounded scalar defaults and secret settings contain only
+named references, never secret values.
+
+### External scripts
+
+Some vendor libraries, such as Google's Maps JavaScript API, cannot be bundled
+and must load their code from the vendor's origin. A plugin that needs this
+declares each origin in `scripts` and adds the `external-scripts` capability:
+
+```json
+{
+  "capabilities": ["editor-ui", "network", "external-scripts"],
+  "network": [
+    {
+      "origin": "https://maps.googleapis.com",
+      "methods": ["GET"],
+      "purpose": "Load Google Maps data for map editors."
+    }
+  ],
+  "scripts": [
+    {
+      "origin": "https://maps.googleapis.com",
+      "purpose": "Run Google's Maps JavaScript API in map editors."
+    }
+  ]
+}
+```
+
+- At most 4 entries, each with an exact HTTPS `origin` and a `purpose` of up
+  to 240 characters shown to users.
+- Every script origin must also appear in `network`. Being allowed to fetch an
+  origin never implies running its code, and running an origin's code never
+  silently grants connections to it; both are declared.
+- `scripts` is omitted when a plugin declares none. Editful releases that
+  predate script origins reject manifests containing `scripts` or
+  `external-scripts`, so set `minAppVersion` to a release that supports them.
+
+Hosts decide how to honor a declaration. Editful adds the origins of enabled
+plugins to its renderer's content security policy when it starts, so a newly
+declared script origin takes effect after Editful restarts.
 
 The validated artifact retains two independent identities:
 

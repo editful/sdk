@@ -163,6 +163,56 @@ describe('plugin tools build', () => {
     );
   });
 
+  it('emits declared script origins and omits an empty declaration', async () => {
+    const network = [
+      {
+        origin: 'https://maps.example.com',
+        methods: ['GET'],
+        purpose: 'Load the map library and its data',
+      },
+    ];
+    const withScripts = await project('export default { register() {} };', {
+      capabilities: ['editor-ui', 'network', 'external-scripts'],
+      network,
+      scripts: [{
+        origin: 'https://maps.example.com',
+        purpose: 'Run the vendor map library',
+      }],
+    });
+    const built = await checkPlugin({ projectDirectory: withScripts });
+    if (built.manifest.schemaVersion !== 2) throw new Error('expected schema 2');
+    expect(built.manifest.scripts).toEqual([{
+      origin: 'https://maps.example.com',
+      purpose: 'Run the vendor map library',
+    }]);
+
+    const withoutScripts = await project('export default { register() {} };');
+    const result = await buildPlugin({ projectDirectory: withoutScripts });
+    const manifest = JSON.parse(
+      await readFile(join(result.artifactDirectory, 'plugin.json'), 'utf8'),
+    ) as Record<string, unknown>;
+    expect(Object.hasOwn(manifest, 'scripts')).toBe(false);
+  });
+
+  it('explains script declarations Editful would refuse', async () => {
+    const missingNetwork = await project('export default { register() {} };', {
+      capabilities: ['editor-ui', 'external-scripts'],
+      scripts: [{ origin: 'https://maps.example.com', purpose: 'Run code' }],
+    });
+    await expect(checkPlugin({ projectDirectory: missingNetwork })).rejects.toThrow(
+      /scripts\[0\]\.origin "https:\/\/maps\.example\.com" must also be declared in network/u,
+    );
+
+    const missingCapability = await project('export default { register() {} };', {
+      capabilities: ['editor-ui', 'network'],
+      network: [{ origin: 'https://maps.example.com', methods: ['GET'], purpose: 'Data' }],
+      scripts: [{ origin: 'https://maps.example.com', purpose: 'Run code' }],
+    });
+    await expect(checkPlugin({ projectDirectory: missingCapability })).rejects.toThrow(
+      /require the "external-scripts" capability/u,
+    );
+  });
+
   it('rejects unsafe plugin ids and filesystem-root output', async () => {
     const unsafe = await project('export default { register() {} };', {
       id: '../../escape',

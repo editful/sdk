@@ -196,6 +196,165 @@ describe('plugin manifest schema 2', () => {
     expect(() => parse(overrides)).toThrow(PluginArtifactValidationError);
   });
 
+  describe('external scripts', () => {
+    const scriptCapabilities = [
+      'node-kinds',
+      'commands',
+      'editor-ui',
+      'network',
+      'configuration',
+      'secrets',
+      'remote-media',
+      'interaction-regions',
+      'external-scripts',
+    ];
+    const scriptNetwork = [
+      {
+        origin: 'https://api.example.com',
+        methods: ['GET', 'POST'],
+        purpose: 'Search for photos',
+      },
+      {
+        origin: 'https://scripts.example.com',
+        methods: ['GET'],
+        purpose: 'Load the map library and its data',
+      },
+    ];
+    function parseScripts(
+      scripts: unknown,
+      overrides: Record<string, unknown> = {},
+    ) {
+      return parse({
+        capabilities: scriptCapabilities,
+        network: scriptNetwork,
+        scripts,
+        ...overrides,
+      });
+    }
+
+    it('defaults to no script origins', () => {
+      const parsed = parse();
+      if (parsed.schemaVersion !== 2) throw new Error('expected schema 2');
+      expect(parsed.scripts).toEqual([]);
+      expect(Object.isFrozen(parsed.scripts)).toBe(true);
+    });
+
+    it('copies and freezes declared script origins', () => {
+      const parsed = parseScripts([{
+        origin: 'https://scripts.example.com',
+        purpose: 'Run the map library',
+      }]);
+      if (parsed.schemaVersion !== 2) throw new Error('expected schema 2');
+      expect(parsed.capabilities.at(-1)).toBe('external-scripts');
+      expect(parsed.scripts).toEqual([{
+        origin: 'https://scripts.example.com',
+        purpose: 'Run the map library',
+      }]);
+      expect(Object.isFrozen(parsed.scripts)).toBe(true);
+      expect(Object.isFrozen(parsed.scripts[0])).toBe(true);
+    });
+
+    it.each([
+      [
+        'a missing external-scripts capability',
+        [{ origin: 'https://scripts.example.com', purpose: 'Run code' }],
+        { capabilities: manifest().capabilities },
+        /require the "external-scripts" capability/,
+      ],
+      [
+        'a non-HTTPS origin',
+        [{ origin: 'http://scripts.example.com', purpose: 'Run code' }],
+        {},
+        /scripts\[0\]\.origin must be a canonical HTTPS origin/,
+      ],
+      [
+        'a wildcard origin',
+        [{ origin: 'https://*.example.com', purpose: 'Run code' }],
+        {},
+        /scripts\[0\]\.origin must be/,
+      ],
+      [
+        'an origin with a path',
+        [{ origin: 'https://scripts.example.com/maps/api/js', purpose: 'Run code' }],
+        {},
+        /scripts\[0\]\.origin must be a canonical HTTPS origin/,
+      ],
+      [
+        'an origin with credentials',
+        [{ origin: 'https://user:secret@scripts.example.com', purpose: 'Run code' }],
+        {},
+        /scripts\[0\]\.origin must be a canonical HTTPS origin/,
+      ],
+      [
+        'a missing purpose',
+        [{ origin: 'https://scripts.example.com' }],
+        {},
+        /purpose must be a non-empty string/,
+      ],
+      [
+        'an overlong purpose',
+        [{ origin: 'https://scripts.example.com', purpose: 'x'.repeat(241) }],
+        {},
+        /purpose exceeds its 240-character limit/,
+      ],
+      [
+        'an unknown nested key',
+        [{ origin: 'https://scripts.example.com', purpose: 'Run code', integrity: 'sha384-x' }],
+        {},
+        /scripts\[0\] contains unsupported key "integrity"/,
+      ],
+      [
+        'a duplicate origin',
+        [
+          { origin: 'https://scripts.example.com', purpose: 'Run code' },
+          { origin: 'https://scripts.example.com', purpose: 'Run more code' },
+        ],
+        {},
+        /duplicate declaration/,
+      ],
+      [
+        'more than four origins',
+        ['a', 'b', 'c', 'd', 'e'].map((host) => ({
+          origin: `https://${host}.example.com`,
+          purpose: 'Run code',
+        })),
+        {},
+        /scripts exceeds its 4-item limit/,
+      ],
+      [
+        'an origin missing from network',
+        [{ origin: 'https://images.example.com', purpose: 'Run code' }],
+        {},
+        /scripts\[0\]\.origin "https:\/\/images\.example\.com" must also be declared in network/,
+      ],
+    ])('rejects %s', (_label, scripts, overrides, message) => {
+      expect(() => parseScripts(scripts, overrides)).toThrow(
+        PluginArtifactValidationError,
+      );
+      expect(() => parseScripts(scripts, overrides)).toThrow(message);
+    });
+
+    it('never treats network access as permission to run scripts', () => {
+      const parsed = parse({ capabilities: scriptCapabilities });
+      if (parsed.schemaVersion !== 2) throw new Error('expected schema 2');
+      expect(parsed.network.length).toBeGreaterThan(0);
+      expect(parsed.scripts).toEqual([]);
+    });
+
+    it('is unavailable to schema 1 manifests', () => {
+      expect(() => parsePluginManifest(JSON.stringify({
+        ...manifest(),
+        schemaVersion: 1,
+        capabilities: ['node-kinds'],
+        network: undefined,
+        remoteMedia: undefined,
+        settings: undefined,
+        secrets: undefined,
+        scripts: [],
+      }), CONTEXT)).toThrow(/unsupported key "scripts"/);
+    });
+  });
+
   it('keeps schema 1 behavior exact', () => {
     const parsed = parsePluginManifest(JSON.stringify({
       ...manifest(),

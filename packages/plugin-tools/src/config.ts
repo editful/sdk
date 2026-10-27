@@ -7,6 +7,7 @@ import {
   type PluginCapability,
   type PluginNetworkDeclaration,
   type PluginRemoteMediaDeclaration,
+  type PluginScriptDeclaration,
   type PluginSecretDeclaration,
   type PluginSettingDeclaration,
 } from '@editful/plugin-artifact';
@@ -31,6 +32,7 @@ const CONFIG_KEYS = new Set([
   'capabilities',
   'network',
   'remoteMedia',
+  'scripts',
   'settings',
   'secrets',
   'author',
@@ -68,6 +70,12 @@ export interface EditfulPluginConfig {
   readonly capabilities: readonly PluginCapability[];
   readonly network?: readonly PluginNetworkDeclaration[];
   readonly remoteMedia?: readonly PluginRemoteMediaDeclaration[];
+  /**
+   * Exact HTTPS origins whose scripts Editful may run in its renderer, for
+   * libraries that must load their code from a vendor origin. Requires the
+   * `external-scripts` capability, and each origin must also be in `network`.
+   */
+  readonly scripts?: readonly PluginScriptDeclaration[];
   readonly settings?: readonly PluginSettingDeclaration[];
   readonly secrets?: readonly PluginSecretDeclaration[];
   readonly author?: string;

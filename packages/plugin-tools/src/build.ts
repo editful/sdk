@@ -198,6 +198,11 @@ function createManifest(
         ...common,
         network: config.network ?? [],
         remoteMedia: config.remoteMedia ?? [],
+        // Omitted when empty so plugins that run no external scripts stay
+        // loadable by Editful releases that predate the declaration.
+        ...(config.scripts === undefined || config.scripts.length === 0
+          ? {}
+          : { scripts: config.scripts }),
         settings: config.settings ?? [],
         secrets: config.secrets ?? [],
         workers,
