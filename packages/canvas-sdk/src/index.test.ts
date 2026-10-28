@@ -14,6 +14,7 @@ import {
   type PluginRendererInstance,
   type PluginSurfaceEditorRequest,
   type PluginSurfaceMarquee,
+  type PluginSurfaceMarqueePhase,
   type PluginSurfaceMarqueeResult,
   type PluginSurfacePoint,
 } from './index.js';
@@ -156,19 +157,24 @@ describe('surface marquee', () => {
           PluginSurfacePoint,
         ]>();
         expectTypeOf(marquee.extend).toEqualTypeOf<boolean>();
-        return marquee.extend
+        expectTypeOf(marquee.phase).toEqualTypeOf<PluginSurfaceMarqueePhase>();
+        return marquee.extend || marquee.phase === 'cancel'
           ? null
           : { featureId: 'pin-1', editor: { editorId: 'fixture:feature', state: { ids: ['pin-1'] } } };
       },
       dispose: () => undefined,
     };
     const corners = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }] as const;
-    const marquee: PluginSurfaceMarquee = { surfaceId: 's', nodeId: 'n', state: {}, corners, extend: false };
+    const marquee: PluginSurfaceMarquee = {
+      phase: 'end', surfaceId: 's', nodeId: 'n', state: {}, corners, extend: false,
+    };
     expect(renderer.marquee?.(marquee)).toEqual({
       featureId: 'pin-1',
       editor: { editorId: 'fixture:feature', state: { ids: ['pin-1'] } },
     });
     expect(renderer.marquee?.({ ...marquee, extend: true })).toBeNull();
+    expect(renderer.marquee?.({ ...marquee, phase: 'cancel' })).toBeNull();
+    expectTypeOf<PluginSurfaceMarqueePhase>().toEqualTypeOf<'move' | 'end' | 'cancel'>();
     expectTypeOf<PluginSurfaceMarqueeResult>().toEqualTypeOf<{
       readonly featureId: string;
       readonly editor?: PluginSurfaceEditorRequest;

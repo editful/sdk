@@ -151,15 +151,22 @@ camera outside the new range to its nearest end about the viewport centre.
 ## Selecting surface features with the marquee
 
 A retained surface renderer, a board background's included, can take part in
-the Select tool's marquee. When a marquee selects no canvas nodes, Editful
+the Select tool's marquee. While a marquee touches no canvas nodes, Editful
 calls `marquee` on the surfaces under it, topmost first, with the marquee's
-corners in surface-local CSS pixels and whether Shift extends the selection.
-The first surface to return a result owns the feature selection, as a pressed
-feature does, and Editful opens the returned editor:
+corners in surface-local CSS pixels and whether Shift or the primary modifier
+extends the selection. `phase` is `move` on every pointer move, to highlight
+what the marquee would select; `end` on release, to select it; and `cancel`
+when the marquee is abandoned, touches nodes, or leaves the surface, to show
+the prior selection again. The first surface to return a result wins and the
+others are told to `cancel`. At `end`, it owns the feature selection, as a
+pressed feature does, and Editful opens the returned editor:
 
 ```ts
-marquee({ surfaceId, corners, extend }) {
+marquee({ phase, surfaceId, corners, extend }) {
+  if (phase === 'cancel') return restoreSelection(surfaceId), null;
   const selected = featuresInside(surfaceId, corners, extend);
+  if (phase === 'move') highlight(surfaceId, selected);
+  else select(surfaceId, selected);
   if (selected.length === 0) return null;
   return {
     featureId: selected[0].id,

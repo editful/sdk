@@ -383,10 +383,19 @@ export interface PluginSurfacePlacementResult {
 }
 
 /**
+ * Where a Select-tool marquee is: `move` while it is dragged, to highlight what
+ * it would select without selecting it; `end` on release, to select; `cancel`
+ * when it is abandoned, selects canvas nodes instead, or leaves the surface,
+ * to show the prior selection again.
+ */
+export type PluginSurfaceMarqueePhase = 'move' | 'end' | 'cancel';
+
+/**
  * A Select-tool marquee over a retained surface, including a board background.
- * The host asks surfaces only when the marquee selects no canvas nodes.
+ * The host asks surfaces only while the marquee touches no canvas nodes.
  */
 export interface PluginSurfaceMarquee {
+  readonly phase: PluginSurfaceMarqueePhase;
   readonly surfaceId: string;
   readonly nodeId: string;
   readonly state: Readonly<Record<string, PluginJson>>;
@@ -401,11 +410,14 @@ export interface PluginSurfaceMarquee {
     PluginSurfacePoint,
     PluginSurfacePoint,
   ];
-  /** Add to the surface's current feature selection instead of replacing it. */
+  /**
+   * Add to the surface's selection from before the marquee instead of
+   * replacing it, as Shift or the primary modifier does for canvas nodes.
+   */
   readonly extend: boolean;
 }
 
-/** The feature selection a marquee made; the host opens its editor. */
+/** The feature selection a marquee would make, or made at `end`; the host opens its editor. */
 export interface PluginSurfaceMarqueeResult {
   /** Stable plugin-owned identity of the selection's primary feature. */
   readonly featureId: string;
@@ -433,10 +445,11 @@ export interface PluginRendererInstance {
     point: PluginSurfacePoint,
   ): PluginSurfacePlacementResult | false;
   /**
-   * Selects the features a Select-tool marquee covers, or returns null when it
-   * selects none. The host asks the topmost surface first and stops at the
-   * first selection, which then owns the feature selection as a pressed
-   * feature does.
+   * Highlights (`move`) or selects (`end`) the features a Select-tool marquee
+   * covers, returning null when it covers none, or restores the prior
+   * selection (`cancel`). The host asks the topmost surface first; the first
+   * result wins, and every other surface is told to `cancel`. A selection
+   * made at `end` owns the feature selection as a pressed feature does.
    */
   marquee?(marquee: PluginSurfaceMarquee): PluginSurfaceMarqueeResult | null;
   /** Clears renderer-owned selection visuals for one surface. */
