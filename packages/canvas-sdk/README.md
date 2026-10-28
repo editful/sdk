@@ -148,6 +148,28 @@ its maximum, so a background can zoom deeper than an ordinary board, up to
 When the background becomes active, or a limit changes, Editful zooms a
 camera outside the new range to its nearest end about the viewport centre.
 
+## Selecting surface features with the marquee
+
+A retained surface renderer, a board background's included, can take part in
+the Select tool's marquee. When a marquee selects no canvas nodes, Editful
+calls `marquee` on the surfaces under it, topmost first, with the marquee's
+corners in surface-local CSS pixels and whether Shift extends the selection.
+The first surface to return a result owns the feature selection, as a pressed
+feature does, and Editful opens the returned editor:
+
+```ts
+marquee({ surfaceId, corners, extend }) {
+  const selected = featuresInside(surfaceId, corners, extend);
+  if (selected.length === 0) return null;
+  return {
+    featureId: selected[0].id,
+    editor: { editorId: 'acme:feature', state: { ids: selected.map(({ id }) => id) } },
+  };
+},
+```
+
+Editful before 0.16 ignores it.
+
 ## Host notification tray
 
 Commands, interactions, importers, and editor callbacks can publish bounded

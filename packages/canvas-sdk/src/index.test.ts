@@ -11,6 +11,11 @@ import {
   type PluginBackgroundSurfaceContribution,
   type PluginEditorChrome,
   type PluginJson,
+  type PluginRendererInstance,
+  type PluginSurfaceEditorRequest,
+  type PluginSurfaceMarquee,
+  type PluginSurfaceMarqueeResult,
+  type PluginSurfacePoint,
 } from './index.js';
 
 describe('hexColor', () => {
@@ -135,6 +140,38 @@ describe('board background camera limits', () => {
     expectTypeOf<PluginBackgroundCameraLimits>().toEqualTypeOf<{
       readonly minZoom?: number;
       readonly maxZoom?: number;
+    }>();
+  });
+});
+
+describe('surface marquee', () => {
+  it('passes the marquee corners and returns an optional selection', () => {
+    const renderer: PluginRendererInstance = {
+      render: () => undefined,
+      marquee(marquee) {
+        expectTypeOf(marquee.corners).toEqualTypeOf<readonly [
+          PluginSurfacePoint,
+          PluginSurfacePoint,
+          PluginSurfacePoint,
+          PluginSurfacePoint,
+        ]>();
+        expectTypeOf(marquee.extend).toEqualTypeOf<boolean>();
+        return marquee.extend
+          ? null
+          : { featureId: 'pin-1', editor: { editorId: 'fixture:feature', state: { ids: ['pin-1'] } } };
+      },
+      dispose: () => undefined,
+    };
+    const corners = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }] as const;
+    const marquee: PluginSurfaceMarquee = { surfaceId: 's', nodeId: 'n', state: {}, corners, extend: false };
+    expect(renderer.marquee?.(marquee)).toEqual({
+      featureId: 'pin-1',
+      editor: { editorId: 'fixture:feature', state: { ids: ['pin-1'] } },
+    });
+    expect(renderer.marquee?.({ ...marquee, extend: true })).toBeNull();
+    expectTypeOf<PluginSurfaceMarqueeResult>().toEqualTypeOf<{
+      readonly featureId: string;
+      readonly editor?: PluginSurfaceEditorRequest;
     }>();
   });
 });

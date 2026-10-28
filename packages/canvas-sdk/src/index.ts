@@ -382,6 +382,36 @@ export interface PluginSurfacePlacementResult {
   readonly selection?: PluginSurfaceFeatureInteraction;
 }
 
+/**
+ * A Select-tool marquee over a retained surface, including a board background.
+ * The host asks surfaces only when the marquee selects no canvas nodes.
+ */
+export interface PluginSurfaceMarquee {
+  readonly surfaceId: string;
+  readonly nodeId: string;
+  readonly state: Readonly<Record<string, PluginJson>>;
+  /**
+   * The marquee's four corners in surface-local CSS pixels from its top-left
+   * corner, in order around the marquee. They form an axis-aligned rectangle
+   * unless the surface is rotated, and may lie outside the surface.
+   */
+  readonly corners: readonly [
+    PluginSurfacePoint,
+    PluginSurfacePoint,
+    PluginSurfacePoint,
+    PluginSurfacePoint,
+  ];
+  /** Add to the surface's current feature selection instead of replacing it. */
+  readonly extend: boolean;
+}
+
+/** The feature selection a marquee made; the host opens its editor. */
+export interface PluginSurfaceMarqueeResult {
+  /** Stable plugin-owned identity of the selection's primary feature. */
+  readonly featureId: string;
+  readonly editor?: PluginSurfaceEditorRequest;
+}
+
 /** One renderer runtime shared by every surface emitted for its contribution. */
 export interface PluginRendererInstance {
   /** Return true when another frame is required after this one. */
@@ -402,6 +432,13 @@ export interface PluginRendererInstance {
     kindId: string,
     point: PluginSurfacePoint,
   ): PluginSurfacePlacementResult | false;
+  /**
+   * Selects the features a Select-tool marquee covers, or returns null when it
+   * selects none. The host asks the topmost surface first and stops at the
+   * first selection, which then owns the feature selection as a pressed
+   * feature does.
+   */
+  marquee?(marquee: PluginSurfaceMarquee): PluginSurfaceMarqueeResult | null;
   /** Clears renderer-owned selection visuals for one surface. */
   clearFeatureSelection?(surfaceId: string): void;
   /** Returns domain-owned labels/links positioned by generic host chrome. */
