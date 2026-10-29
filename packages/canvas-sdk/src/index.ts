@@ -248,6 +248,12 @@ export interface PluginRendererHost {
   readonly boardId?: string;
   readonly network: PluginRendererNetwork;
   readonly workers: PluginRendererWorkers;
+  /**
+   * Ephemeral state shared live with the board's other clients, such as a
+   * feature being dragged. Absent on a local-only document and on hosts that
+   * predate it.
+   */
+  readonly live?: PluginRendererLive;
   /** Schedules another host canvas frame without starting a private loop. */
   requestFrame(): void;
   /** Resolves a validated plugin artifact asset to a retained URL. */
@@ -265,6 +271,64 @@ export interface PluginRendererHost {
     recordId: string,
     value: PluginJson | null,
   ): boolean;
+}
+
+/** Another client on the board, as seen by {@link PluginRendererLive}. */
+export interface PluginLivePeer {
+  /** Stable for the peer's connection; distinct per open window. */
+  readonly clientId: number;
+  readonly name: string;
+  /** The peer's presence colour, as a CSS colour. */
+  readonly colour: string;
+}
+
+/**
+ * What this client is in the middle of doing, relayed to the board's other
+ * clients and never saved: the plugin publishes as often as it likes and the
+ * host sends the latest value at most once per frame. Channels are scoped to
+ * the plugin. A value must serialise to at most 1 KiB of JSON.
+ *
+ * A peer's value clears (the listener receives `null`) when it publishes
+ * `null`, disconnects, or sends nothing for about two seconds; the host
+ * repeats a value that stays set so it does not lapse.
+ */
+export interface PluginRendererLive {
+  /**
+   * Sets this client's value on `channel`, or clears it with `null`. Throws
+   * `RangeError` for an empty channel, a channel whose UTF-8 bytes with the
+   * plugin's id and a slash (`<pluginId>/<channel>`) exceed 128, or a value
+   * whose JSON exceeds 1 KiB.
+   */
+  publish(channel: string, value: PluginJson | null): void;
+  /**
+   * Observes other clients' values on `channel`. Returns an unsubscribe
+   * function. Throws `RangeError` for a channel `publish` would refuse.
+   */
+  subscribe(
+    channel: string,
+    listener: (peer: PluginLivePeer, value: PluginJson | null) => void,
+  ): () => void;
+  /**
+   * Sets the offset of what this client is dragging, in the plugin's own
+   * units, or ends the drag with `null`. The host sends it with this client's
+   * cursor, twenty times a second, rather than as frames of its own, and peers
+   * smooth it as they smooth the cursor: say once, with `publish`, what is
+   * being dragged, and move it here. A client drags one thing at a time.
+   * Throws `RangeError` for a non-finite offset. Absent on hosts that predate it.
+   */
+  setDragOffset?(offset: PluginDragOffset | null): void;
+  /**
+   * A peer's drag offset for the frame being drawn, smoothed and drawn a
+   * moment in the past, in step with its cursor; `null` while it drags
+   * nothing. Read it every frame, and request frames, while a peer drags.
+   */
+  peerDragOffset?(clientId: number): PluginDragOffset | null;
+}
+
+/** How far something being dragged has moved, in the dragging plugin's own units. */
+export interface PluginDragOffset {
+  readonly dx: number;
+  readonly dy: number;
 }
 
 export interface PluginRecordCollection {
@@ -382,6 +446,48 @@ export interface PluginSurfacePlacementResult {
   readonly selection?: PluginSurfaceFeatureInteraction;
 }
 
+/**
+ * Where a Select-tool marquee is: `move` while it is dragged, to highlight what
+ * it would select without selecting it; `end` on release, to select; `cancel`
+ * when it is abandoned, selects canvas nodes instead, or leaves the surface,
+ * to show the prior selection again.
+ */
+export type PluginSurfaceMarqueePhase = 'move' | 'end' | 'cancel';
+
+/**
+ * A Select-tool marquee over a retained surface, including a board background.
+ * The host asks surfaces only while the marquee touches no canvas nodes.
+ */
+export interface PluginSurfaceMarquee {
+  readonly phase: PluginSurfaceMarqueePhase;
+  readonly surfaceId: string;
+  readonly nodeId: string;
+  readonly state: Readonly<Record<string, PluginJson>>;
+  /**
+   * The marquee's four corners in surface-local CSS pixels from its top-left
+   * corner, in order around the marquee. They form an axis-aligned rectangle
+   * unless the surface is rotated, and may lie outside the surface.
+   */
+  readonly corners: readonly [
+    PluginSurfacePoint,
+    PluginSurfacePoint,
+    PluginSurfacePoint,
+    PluginSurfacePoint,
+  ];
+  /**
+   * Add to the surface's selection from before the marquee instead of
+   * replacing it, as Shift or the primary modifier does for canvas nodes.
+   */
+  readonly extend: boolean;
+}
+
+/** The feature selection a marquee would make, or made at `end`; the host opens its editor. */
+export interface PluginSurfaceMarqueeResult {
+  /** Stable plugin-owned identity of the selection's primary feature. */
+  readonly featureId: string;
+  readonly editor?: PluginSurfaceEditorRequest;
+}
+
 /** One renderer runtime shared by every surface emitted for its contribution. */
 export interface PluginRendererInstance {
   /** Return true when another frame is required after this one. */
@@ -402,6 +508,16 @@ export interface PluginRendererInstance {
     kindId: string,
     point: PluginSurfacePoint,
   ): PluginSurfacePlacementResult | false;
+  /**
+   * Highlights (`move`) or selects (`end`) the features a Select-tool marquee
+   * covers, returning null when it covers none, or restores the prior
+   * selection (`cancel`). The host asks the topmost surface first; the first
+   * result wins, and every other surface it asked or skipped, including any
+   * that returned null above the winner, is told to `cancel`. When none wins
+   * the surfaces keep what they showed. A selection made at `end` owns the
+   * feature selection as a pressed feature does.
+   */
+  marquee?(marquee: PluginSurfaceMarquee): PluginSurfaceMarqueeResult | null;
   /** Clears renderer-owned selection visuals for one surface. */
   clearFeatureSelection?(surfaceId: string): void;
   /** Returns domain-owned labels/links positioned by generic host chrome. */
@@ -447,6 +563,26 @@ export type PluginBackgroundStatus<State extends PluginJson = PluginJson> =
       readonly label: string;
     };
 
+/**
+ * Limits a board background places on the canvas camera while it is active.
+ * Zooms are canvas zooms, in CSS pixels per canvas unit. Omit a limit, or
+ * return a value that is not a positive finite number, to keep the host's.
+ */
+export interface PluginBackgroundCameraLimits {
+  /**
+   * Lowest canvas zoom. It replaces the host's minimum, so it can zoom further
+   * out than ordinary boards, down to a host floor (2^-20 in Editful 0.16),
+   * and is never more than the maximum in effect.
+   */
+  readonly minZoom?: number;
+  /**
+   * Highest canvas zoom. It replaces the host's maximum, so it can zoom deeper
+   * than ordinary boards, up to a host ceiling where rendering stays precise
+   * (2^20 in Editful 0.16). It never falls below the host's minimum.
+   */
+  readonly maxZoom?: number;
+}
+
 export interface PluginBackgroundSurfaceContribution<
   Kind = unknown,
   State extends PluginJson = PluginJson,
@@ -462,6 +598,13 @@ export interface PluginBackgroundSurfaceContribution<
     services: PackServices,
     out: PrimitiveWriter,
   ): void;
+  /**
+   * Limits the canvas camera while this background is active, read from the
+   * same source node and state as `pack`. The host asks again whenever the
+   * document changes and moves a camera that is outside the new limits, so
+   * keep it cheap and pure. Editful before 0.16 ignores it.
+   */
+  camera?(source: PackedNode<Kind>, state: State): PluginBackgroundCameraLimits;
 }
 
 export interface CreateContribution {
@@ -880,6 +1023,18 @@ export interface PluginEditors {
   state(editorId: string): PluginJson | undefined;
 }
 
+/**
+ * This user's view of the canvas. It is local state: moving it changes only
+ * what this client shows, never the document or a collaborator's view.
+ */
+export interface PluginViewport {
+  /**
+   * Centers the view on a canvas point, optionally at a zoom in screen pixels
+   * per canvas unit. The host keeps the view within its camera limits.
+   */
+  moveTo(target: { readonly x: number; readonly y: number; readonly zoom?: number }): void;
+}
+
 export interface PluginActionContext {
   readonly signal: AbortSignal;
   /** Stable board id for constructing declared board-scoped service requests. */
@@ -892,6 +1047,8 @@ export interface PluginActionContext {
   readonly remoteMedia: PluginRemoteMedia;
   readonly ui: PluginActionUi;
   readonly editors: PluginEditors;
+  /** This user's view of the canvas. Absent on hosts without the capability. */
+  readonly viewport?: PluginViewport;
   openExternal(url: string): Promise<void>;
 }
 
@@ -1063,7 +1220,7 @@ export interface KindBuilder<Kind = unknown> {
   pack(fn: PackFunction<Kind>): void;
 }
 
-/** Read-only node view valid only for the duration of one pack call. */
+/** Read-only node view valid only for the duration of one pack or camera call. */
 export interface PackedNode<Kind = unknown> {
   readonly x: number;
   readonly y: number;

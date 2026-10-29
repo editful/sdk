@@ -119,6 +119,119 @@ store, mutable registry, numeric kind/field index, renderer internals, raw IPC,
 Node, filesystem, shell, or subprocess API. Field handles are branded to their
 declaring kind and candidate registry.
 
+## Board backgrounds
+
+`context.backgroundSurface(...)` lets one node of a declared `sourceKind` fill
+the board behind ordinary content while a plugin holds the board's background
+lease. `pack(source, state, services, out)` emits the retained surface from
+that source node.
+
+A background can also limit the canvas camera while it is active. `camera`
+reads the same source node and state as `pack`, and `minZoom` and `maxZoom`
+are in canvas zoom units, CSS pixels per canvas unit. A map drawn at map zoom
+`baseZoom + log2(canvasZoom)` shows the whole world, map zoom 0, at canvas
+zoom `2 ** -baseZoom`, and map zoom 22 at `2 ** (22 - baseZoom)`:
+
+```ts
+context.backgroundSurface<'acme:map', { readonly sourceMapId: string }>({
+  // id, label, stateSchema, sourceKind, sourceNodeId, pack...
+  camera: (source) => ({
+    minZoom: 2 ** -source.get(baseZoom),
+    maxZoom: 2 ** (22 - source.get(baseZoom)),
+  }),
+});
+```
+
+Both replace Editful's own limits, so a background can zoom further out than
+an ordinary board, down to 2^-20, and deeper in, up to 2^20 where rendering
+stays precise: a map anchored at street level still zooms out to the whole
+world. The minimum never exceeds the maximum.
+When the background becomes active, or a limit changes, Editful zooms a
+camera outside the new range to its nearest end about the viewport centre.
+
+### Moving this user's view
+
+Changing a background's source node moves the background for everyone on the
+board. To take one user to a place instead, such as a search result, an
+action or editor moves that user's camera with `context.viewport`:
+
+```ts
+context.viewport?.moveTo({ x, y, zoom: 2 ** (15 - baseZoom) });
+```
+
+`x` and `y` are canvas coordinates and `zoom` is optional, in the same units
+as `camera`. The view stays within the camera limits, and nothing is written
+to the document. Hosts without the capability leave `viewport` undefined.
+
+## Sharing an interaction live
+
+`host.live` (absent on local-only documents and older hosts) shares what this
+client is in the middle of doing, such as a feature being dragged, with the
+board's other clients without saving it. Publish as often as you like; Editful
+sends the latest value at most once a frame and repeats a value that stays set.
+A peer's value reaches your listener with their name and presence colour, and
+`null` when they clear it, leave, disconnect, or go quiet for about two
+seconds. Commit the result through the document as usual when the interaction
+ends.
+
+Channels are scoped to your plugin. A channel must be non-empty, and
+`<pluginId>/<channel>` at most 128 UTF-8 bytes; a value's JSON at most 1 KiB.
+Both methods throw `RangeError` otherwise.
+
+A drag is shared in two parts. Say what is being dragged once, on a channel,
+and move it with `setDragOffset`, in your own units: Editful sends the offset
+with this client's cursor, twenty times a second, and peers smooth it as they
+smooth that cursor, so a drag costs nothing beyond the cursor, looks smooth on
+a slow connection, and stays in step with the dragger's pointer. Peers read
+the smoothed offset with `peerDragOffset` each frame they draw:
+
+```ts
+host.live?.publish('drag', { ids });           // as it begins
+host.live?.setDragOffset?.({ dx, dy });        // as it moves
+host.live?.setDragOffset?.(null);              // as it ends
+host.live?.publish('drag', null);
+
+host.live?.subscribe('drag', (peer, value) => {
+  if (value === null) clearPreview(peer.clientId);
+  else drawPreview(peer.clientId, peer.colour, value.ids);
+});
+// In render, while a peer drags:
+const offset = host.live?.peerDragOffset?.(clientId);
+if (offset !== null && offset !== undefined) movePreview(clientId, offset);
+host.requestFrame();
+```
+
+## Selecting surface features with the marquee
+
+A retained surface renderer, a board background's included, can take part in
+the Select tool's marquee. While a marquee touches no canvas nodes, Editful
+calls `marquee` on the surfaces under it, topmost first, with the marquee's
+corners in surface-local CSS pixels and whether Shift or the primary modifier
+extends the selection. `phase` is `move` on every pointer move, to highlight
+what the marquee would select; `end` on release, to select it; and `cancel`
+when the marquee is abandoned, touches nodes, or leaves the surface, to show
+the prior selection again. The first surface to return a result wins, and
+every other surface, including one above it that returned null, is told to
+`cancel`; when none wins, each keeps what it showed. At `end`, the winner owns
+the feature selection, as a pressed feature does, and Editful opens the
+returned editor:
+
+```ts
+marquee({ phase, surfaceId, corners, extend }) {
+  if (phase === 'cancel') return restoreSelection(surfaceId), null;
+  const selected = featuresInside(surfaceId, corners, extend);
+  if (phase === 'move') highlight(surfaceId, selected);
+  else select(surfaceId, selected);
+  if (selected.length === 0) return null;
+  return {
+    featureId: selected[0].id,
+    editor: { editorId: 'acme:feature', state: { ids: selected.map(({ id }) => id) } },
+  };
+},
+```
+
+Editful before 0.16 ignores it.
+
 ## Host notification tray
 
 Commands, interactions, importers, and editor callbacks can publish bounded
