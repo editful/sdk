@@ -248,6 +248,12 @@ export interface PluginRendererHost {
   readonly boardId?: string;
   readonly network: PluginRendererNetwork;
   readonly workers: PluginRendererWorkers;
+  /**
+   * Ephemeral state shared live with the board's other clients, such as a
+   * feature being dragged. Absent on a local-only document and on hosts that
+   * predate it.
+   */
+  readonly live?: PluginRendererLive;
   /** Schedules another host canvas frame without starting a private loop. */
   requestFrame(): void;
   /** Resolves a validated plugin artifact asset to a retained URL. */
@@ -265,6 +271,35 @@ export interface PluginRendererHost {
     recordId: string,
     value: PluginJson | null,
   ): boolean;
+}
+
+/** Another client on the board, as seen by {@link PluginRendererLive}. */
+export interface PluginLivePeer {
+  /** Stable for the peer's connection; distinct per open window. */
+  readonly clientId: number;
+  readonly name: string;
+  /** The peer's presence colour, as a CSS colour. */
+  readonly colour: string;
+}
+
+/**
+ * What this client is in the middle of doing, relayed to the board's other
+ * clients and never saved: the plugin publishes as often as it likes and the
+ * host sends the latest value at most once per frame. Channels are scoped to
+ * the plugin. A value must serialise to at most 1 KiB of JSON.
+ *
+ * A peer's value clears (the listener receives `null`) when it publishes
+ * `null`, disconnects, or sends nothing for about two seconds; the host
+ * repeats a value that stays set so it does not lapse.
+ */
+export interface PluginRendererLive {
+  /** Sets this client's value on `channel`, or clears it with `null`. */
+  publish(channel: string, value: PluginJson | null): void;
+  /** Observes other clients' values on `channel`. Returns an unsubscribe function. */
+  subscribe(
+    channel: string,
+    listener: (peer: PluginLivePeer, value: PluginJson | null) => void,
+  ): () => void;
 }
 
 export interface PluginRecordCollection {

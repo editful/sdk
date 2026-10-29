@@ -1,5 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
+  type PluginLivePeer,
+  type PluginRendererLive,
+  type PluginRendererHost,
   LineMarker,
   Primitive,
   definePlugin,
@@ -190,5 +193,30 @@ describe('line primitives', () => {
   it('encodes start and end markers independently', () => {
     expect(encodeLineMarkers(LineMarker.OpenArrow, LineMarker.SolidArrow)).toBe(9);
     expect(encodeLineMarkers(LineMarker.Cap, LineMarker.None)).toBe(3);
+  });
+});
+
+describe('renderer live state', () => {
+  it('publishes JSON values and reports peers, optionally', () => {
+    expectTypeOf<PluginRendererHost['live']>().toEqualTypeOf<PluginRendererLive | undefined>();
+    expectTypeOf<PluginRendererLive['publish']>().parameters.toEqualTypeOf<
+      [channel: string, value: PluginJson | null]
+    >();
+    expectTypeOf<PluginLivePeer>().toEqualTypeOf<{
+      readonly clientId: number;
+      readonly name: string;
+      readonly colour: string;
+    }>();
+    const seen: (PluginJson | null)[] = [];
+    const live: PluginRendererLive = {
+      publish: () => undefined,
+      subscribe(_channel, listener) {
+        listener({ clientId: 2, name: 'Ada', colour: '#ff0000' }, { ids: ['a'] });
+        listener({ clientId: 2, name: 'Ada', colour: '#ff0000' }, null);
+        return () => undefined;
+      },
+    };
+    live.subscribe('drag', (_peer, value) => seen.push(value));
+    expect(seen).toEqual([{ ids: ['a'] }, null]);
   });
 });
