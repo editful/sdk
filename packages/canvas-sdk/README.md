@@ -142,9 +142,10 @@ context.backgroundSurface<'acme:map', { readonly sourceMapId: string }>({
 });
 ```
 
-Editful uses the higher of its own minimum and `minZoom`. `maxZoom` replaces
-its maximum, so a background can zoom deeper than an ordinary board, up to
-2^20 where rendering stays precise; the minimum never exceeds the maximum.
+Both replace Editful's own limits, so a background can zoom further out than
+an ordinary board, down to 2^-20, and deeper in, up to 2^20 where rendering
+stays precise: a map anchored at street level still zooms out to the whole
+world. The minimum never exceeds the maximum.
 When the background becomes active, or a limit changes, Editful zooms a
 camera outside the new range to its nearest end about the viewport centre.
 

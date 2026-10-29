@@ -570,8 +570,9 @@ export type PluginBackgroundStatus<State extends PluginJson = PluginJson> =
  */
 export interface PluginBackgroundCameraLimits {
   /**
-   * Lowest canvas zoom. The host never zooms out past its own minimum either,
-   * so it uses whichever is higher, and never more than the maximum in effect.
+   * Lowest canvas zoom. It replaces the host's minimum, so it can zoom further
+   * out than ordinary boards, down to a host floor (2^-20 in Editful 0.16),
+   * and is never more than the maximum in effect.
    */
   readonly minZoom?: number;
   /**
