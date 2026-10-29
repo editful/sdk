@@ -308,6 +308,27 @@ export interface PluginRendererLive {
     channel: string,
     listener: (peer: PluginLivePeer, value: PluginJson | null) => void,
   ): () => void;
+  /**
+   * Sets the offset of what this client is dragging, in the plugin's own
+   * units, or ends the drag with `null`. The host sends it with this client's
+   * cursor, twenty times a second, rather than as frames of its own, and peers
+   * smooth it as they smooth the cursor: say once, with `publish`, what is
+   * being dragged, and move it here. A client drags one thing at a time.
+   * Throws `RangeError` for a non-finite offset. Absent on hosts that predate it.
+   */
+  setDragOffset?(offset: PluginDragOffset | null): void;
+  /**
+   * A peer's drag offset for the frame being drawn, smoothed and drawn a
+   * moment in the past, in step with its cursor; `null` while it drags
+   * nothing. Read it every frame, and request frames, while a peer drags.
+   */
+  peerDragOffset?(clientId: number): PluginDragOffset | null;
+}
+
+/** How far something being dragged has moved, in the dragging plugin's own units. */
+export interface PluginDragOffset {
+  readonly dx: number;
+  readonly dy: number;
 }
 
 export interface PluginRecordCollection {

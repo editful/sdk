@@ -173,18 +173,32 @@ A peer's value reaches your listener with their name and presence colour, and
 seconds. Commit the result through the document as usual when the interaction
 ends.
 
-```ts
-host.live?.publish('drag', { ids, dx, dy });   // while dragging
-host.live?.publish('drag', null);              // when it ends
-const unsubscribe = host.live?.subscribe('drag', (peer, value) => {
-  if (value === null) clearPreview(peer.clientId);
-  else drawPreview(peer.clientId, peer.colour, value);
-});
-```
-
 Channels are scoped to your plugin. A channel must be non-empty, and
 `<pluginId>/<channel>` at most 128 UTF-8 bytes; a value's JSON at most 1 KiB.
 Both methods throw `RangeError` otherwise.
+
+A drag is shared in two parts. Say what is being dragged once, on a channel,
+and move it with `setDragOffset`, in your own units: Editful sends the offset
+with this client's cursor, twenty times a second, and peers smooth it as they
+smooth that cursor, so a drag costs nothing beyond the cursor, looks smooth on
+a slow connection, and stays in step with the dragger's pointer. Peers read
+the smoothed offset with `peerDragOffset` each frame they draw:
+
+```ts
+host.live?.publish('drag', { ids });           // as it begins
+host.live?.setDragOffset?.({ dx, dy });        // as it moves
+host.live?.setDragOffset?.(null);              // as it ends
+host.live?.publish('drag', null);
+
+host.live?.subscribe('drag', (peer, value) => {
+  if (value === null) clearPreview(peer.clientId);
+  else drawPreview(peer.clientId, peer.colour, value.ids);
+});
+// In render, while a peer drags:
+const offset = host.live?.peerDragOffset?.(clientId);
+if (offset !== null && offset !== undefined) movePreview(clientId, offset);
+host.requestFrame();
+```
 
 ## Selecting surface features with the marquee
 
