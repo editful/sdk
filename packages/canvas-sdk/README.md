@@ -148,6 +148,20 @@ its maximum, so a background can zoom deeper than an ordinary board, up to
 When the background becomes active, or a limit changes, Editful zooms a
 camera outside the new range to its nearest end about the viewport centre.
 
+### Moving this user's view
+
+Changing a background's source node moves the background for everyone on the
+board. To take one user to a place instead, such as a search result, an
+action or editor moves that user's camera with `context.viewport`:
+
+```ts
+context.viewport?.moveTo({ x, y, zoom: 2 ** (15 - baseZoom) });
+```
+
+`x` and `y` are canvas coordinates and `zoom` is optional, in the same units
+as `camera`. The view stays within the camera limits, and nothing is written
+to the document. Hosts without the capability leave `viewport` undefined.
+
 ## Sharing an interaction live
 
 `host.live` (absent on local-only documents and older hosts) shares what this

@@ -1001,6 +1001,18 @@ export interface PluginEditors {
   state(editorId: string): PluginJson | undefined;
 }
 
+/**
+ * This user's view of the canvas. It is local state: moving it changes only
+ * what this client shows, never the document or a collaborator's view.
+ */
+export interface PluginViewport {
+  /**
+   * Centers the view on a canvas point, optionally at a zoom in screen pixels
+   * per canvas unit. The host keeps the view within its camera limits.
+   */
+  moveTo(target: { readonly x: number; readonly y: number; readonly zoom?: number }): void;
+}
+
 export interface PluginActionContext {
   readonly signal: AbortSignal;
   /** Stable board id for constructing declared board-scoped service requests. */
@@ -1013,6 +1025,8 @@ export interface PluginActionContext {
   readonly remoteMedia: PluginRemoteMedia;
   readonly ui: PluginActionUi;
   readonly editors: PluginEditors;
+  /** This user's view of the canvas. Absent on hosts without the capability. */
+  readonly viewport?: PluginViewport;
   openExternal(url: string): Promise<void>;
 }
 
