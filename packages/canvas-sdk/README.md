@@ -148,6 +148,30 @@ its maximum, so a background can zoom deeper than an ordinary board, up to
 When the background becomes active, or a limit changes, Editful zooms a
 camera outside the new range to its nearest end about the viewport centre.
 
+## Sharing an interaction live
+
+`host.live` (absent on local-only documents and older hosts) shares what this
+client is in the middle of doing, such as a feature being dragged, with the
+board's other clients without saving it. Publish as often as you like; Editful
+sends the latest value at most once a frame and repeats a value that stays set.
+A peer's value reaches your listener with their name and presence colour, and
+`null` when they clear it, leave, disconnect, or go quiet for about two
+seconds. Commit the result through the document as usual when the interaction
+ends.
+
+```ts
+host.live?.publish('drag', { ids, dx, dy });   // while dragging
+host.live?.publish('drag', null);              // when it ends
+const unsubscribe = host.live?.subscribe('drag', (peer, value) => {
+  if (value === null) clearPreview(peer.clientId);
+  else drawPreview(peer.clientId, peer.colour, value);
+});
+```
+
+Channels are scoped to your plugin. A channel must be non-empty, and
+`<pluginId>/<channel>` at most 128 UTF-8 bytes; a value's JSON at most 1 KiB.
+Both methods throw `RangeError` otherwise.
+
 ## Selecting surface features with the marquee
 
 A retained surface renderer, a board background's included, can take part in
@@ -157,9 +181,11 @@ corners in surface-local CSS pixels and whether Shift or the primary modifier
 extends the selection. `phase` is `move` on every pointer move, to highlight
 what the marquee would select; `end` on release, to select it; and `cancel`
 when the marquee is abandoned, touches nodes, or leaves the surface, to show
-the prior selection again. The first surface to return a result wins and the
-others are told to `cancel`. At `end`, it owns the feature selection, as a
-pressed feature does, and Editful opens the returned editor:
+the prior selection again. The first surface to return a result wins, and
+every other surface, including one above it that returned null, is told to
+`cancel`; when none wins, each keeps what it showed. At `end`, the winner owns
+the feature selection, as a pressed feature does, and Editful opens the
+returned editor:
 
 ```ts
 marquee({ phase, surfaceId, corners, extend }) {

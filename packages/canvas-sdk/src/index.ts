@@ -293,9 +293,17 @@ export interface PluginLivePeer {
  * repeats a value that stays set so it does not lapse.
  */
 export interface PluginRendererLive {
-  /** Sets this client's value on `channel`, or clears it with `null`. */
+  /**
+   * Sets this client's value on `channel`, or clears it with `null`. Throws
+   * `RangeError` for an empty channel, a channel whose UTF-8 bytes with the
+   * plugin's id and a slash (`<pluginId>/<channel>`) exceed 128, or a value
+   * whose JSON exceeds 1 KiB.
+   */
   publish(channel: string, value: PluginJson | null): void;
-  /** Observes other clients' values on `channel`. Returns an unsubscribe function. */
+  /**
+   * Observes other clients' values on `channel`. Returns an unsubscribe
+   * function. Throws `RangeError` for a channel `publish` would refuse.
+   */
   subscribe(
     channel: string,
     listener: (peer: PluginLivePeer, value: PluginJson | null) => void,
@@ -483,8 +491,10 @@ export interface PluginRendererInstance {
    * Highlights (`move`) or selects (`end`) the features a Select-tool marquee
    * covers, returning null when it covers none, or restores the prior
    * selection (`cancel`). The host asks the topmost surface first; the first
-   * result wins, and every other surface is told to `cancel`. A selection
-   * made at `end` owns the feature selection as a pressed feature does.
+   * result wins, and every other surface it asked or skipped, including any
+   * that returned null above the winner, is told to `cancel`. When none wins
+   * the surfaces keep what they showed. A selection made at `end` owns the
+   * feature selection as a pressed feature does.
    */
   marquee?(marquee: PluginSurfaceMarquee): PluginSurfaceMarqueeResult | null;
   /** Clears renderer-owned selection visuals for one surface. */
